@@ -1,0 +1,33 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { teamBuckets } from "../../data/teams";
+
+const base = import.meta.env.BASE_URL;
+const withBase = (path) => `${base}${path.replace(/^\\//, "")}`;
+---
+
+<Layout title="Vista Teams | Specialty Buckets">
+  <section class="section-shell py-14">
+    <span class="chip">Team Buckets</span>
+    <h1 class="mt-4 text-5xl md:text-6xl">Choose the experts for your decision.</h1>
+    <p class="mt-4 max-w-2xl text-lg text-white/80">
+      Each bucket has its own lead experts, methods, and outcome playbooks. This page is fully ready for real bios and
+      photos when you have them.
+    </p>
+  </section>
+
+  <section class="section-shell pb-20">
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {
+        teamBuckets.map((team) => (
+          <a href={withBase(`/teams/${team.slug}`)} class="team-card" style={`--bucket-color:${team.accent};`}>
+            <p class="mono mb-3 text-xs text-white/70">{team.shortName}</p>
+            <h2 class="mb-3 text-2xl">{team.name}</h2>
+            <p class="text-sm text-white/78">{team.summary}</p>
+            <p class="mt-5 text-sm font-semibold">Open team page →</p>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+</Layout>

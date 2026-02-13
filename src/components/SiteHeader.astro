@@ -1,0 +1,63 @@
+---
+const navItems = [
+  { href: "/", label: "Home" },
+  { href: "/teams", label: "Teams" },
+  { href: "/about", label: "About" },
+  { href: "/insights", label: "Insights" },
+  { href: "/case-studies", label: "Case Studies" },
+  { href: "/contact", label: "Contact" }
+];
+
+const currentPath = Astro.url.pathname;
+const base = import.meta.env.BASE_URL;
+const basePath = base.endsWith("/") ? base.slice(0, -1) : base;
+const normalizePath = (path) => (path.replace(/\/$/, "") || "/");
+const currentNormalized = normalizePath(
+  currentPath.startsWith(basePath) ? currentPath.slice(basePath.length) : currentPath
+);
+const withBase = (path) => `${base}${path.replace(/^\\//, "")}`;
+---
+
+<header id="siteHeader" class="site-header sticky top-0 z-50">
+  <div class="section-shell flex h-18 items-center justify-between gap-3">
+    <a href={withBase("/")} class="flex items-center gap-3 font-semibold tracking-tight">
+      <img
+        src={`${base}logos/simplified-white-text-red-arrow.png`}
+        alt="Vista Site Selection"
+        class="h-4 w-auto object-contain"
+      />
+    </a>
+    <nav aria-label="Main navigation" class="header-nav-scroll">
+      <ul class="flex items-center gap-1 text-sm md:gap-2">
+        {
+          navItems.map((item) => (
+            <li>
+              <a
+                href={withBase(item.href)}
+                class={`rounded-full px-3 py-2 transition-colors ${
+                  currentNormalized === normalizePath(item.href)
+                    ? "bg-white/15 text-white"
+                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const syncHeaderState = () => {
+    const header = document.getElementById("siteHeader");
+    if (!header) return;
+    header.classList.toggle("is-scrolled", window.scrollY > 40);
+  };
+
+  syncHeaderState();
+  window.addEventListener("scroll", syncHeaderState, { passive: true });
+  document.addEventListener("astro:page-load", syncHeaderState);
+</script>

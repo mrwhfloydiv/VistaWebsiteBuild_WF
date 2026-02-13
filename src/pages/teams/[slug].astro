@@ -1,0 +1,81 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { teamBuckets } from "../../data/teams";
+
+export function getStaticPaths() {
+  return teamBuckets.map((team) => ({
+    params: { slug: team.slug },
+    props: { team }
+  }));
+}
+
+const { team } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const withBase = (path) => `${base}${path.replace(/^\\//, "")}`;
+---
+
+<Layout title={`${team.name} | Vista Site Selection`}>
+  <section class="section-shell py-14">
+    <div class="mb-5 flex items-center gap-3">
+      <a href={withBase("/teams")} class="btn-secondary !px-3 !py-1.5 !text-xs"><- All teams</a>
+      <span class="chip">{team.shortName}</span>
+    </div>
+    <h1 class="text-5xl md:text-6xl">{team.name}</h1>
+    <p class="mt-5 max-w-3xl text-lg text-white/82">{team.summary}</p>
+  </section>
+
+  <section class="section-shell grid gap-4 pb-8 lg:grid-cols-2">
+    <article class="glass rounded-2xl p-6">
+      <h2 class="mb-4 text-3xl">What we do</h2>
+      <ul class="space-y-3">
+        {
+          team.whatWeDo.map((item: string) => (
+            <li class="rounded-xl border border-white/12 bg-black/20 px-4 py-3 text-white/90">{item}</li>
+          ))
+        }
+      </ul>
+    </article>
+    <article class="glass rounded-2xl p-6">
+      <h2 class="mb-4 text-3xl">How we help</h2>
+      <ol class="space-y-3">
+        {
+          team.howWeHelp.map((item: string, index: number) => (
+            <li class="rounded-xl border border-white/12 bg-black/20 px-4 py-3 text-white/90">
+              <span class="mono mr-2 text-white/60">0{index + 1}</span>
+              {item}
+            </li>
+          ))
+        }
+      </ol>
+    </article>
+  </section>
+
+  <section class="section-shell pb-8">
+    <h2 class="mb-4 text-3xl">Experts</h2>
+    <div class="grid gap-4 md:grid-cols-3">
+      {
+        team.experts.map((expert: { name: string; title: string; specialty: string }) => (
+          <article class="team-card" style={`--bucket-color:${team.accent};`}>
+            <div class="mb-4 h-36 rounded-xl border border-white/15 bg-gradient-to-br from-white/10 to-white/0"></div>
+            <h3 class="text-2xl">{expert.name}</h3>
+            <p class="mt-1 text-white/75">{expert.title}</p>
+            <p class="mono mt-3 text-xs text-white/65">{expert.specialty}</p>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="section-shell pb-18">
+    <div class="rounded-2xl border border-white/12 bg-[#1a2328] p-7 md:p-9">
+      <h2 class="text-4xl">Need this team in your corner?</h2>
+      <p class="mt-3 max-w-2xl text-white/80">
+        This mock section will become a direct routing CTA to the real practice lead once we add live contact data.
+      </p>
+      <div class="mt-6">
+        <a href={withBase("/contact")} class="btn-primary">Talk to {team.shortName} team</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+

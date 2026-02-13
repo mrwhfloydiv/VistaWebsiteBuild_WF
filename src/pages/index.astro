@@ -1,0 +1,279 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { teamBuckets } from "../data/teams";
+
+const base = import.meta.env.BASE_URL;
+const withBase = (path) => `${base}${path.replace(/^\\//, "")}`;
+
+const heroSlides = [
+  {
+    title: "Signal in\nthe noise.",
+    text: "Navigate complexity with location intelligence built for executive-level decisions."
+  },
+  {
+    title: "Leverage in\nevery market.",
+    text: "Shape stronger outcomes with structured incentive strategy and negotiation support."
+  },
+  {
+    title: "Execution that\nholds up.",
+    text: "Move from shortlist to implementation with fewer surprises and faster alignment."
+  }
+];
+
+const orbitNodes = [
+  { id: "node-eis", label: "Economic Impact Studies", href: "/teams/economic-impact-studies" },
+  { id: "node-aerospace", label: "Aerospace & Defense", href: "/teams/aerospace-defense" },
+  { id: "node-data", label: "Data & Analytics", href: "/teams/data-analytics" },
+  { id: "node-datacenters", label: "Data Centers", href: "/teams/data-centers" },
+  { id: "node-incentives", label: "Incentives", href: "/teams/incentives" },
+  { id: "node-growth", label: "Strategic Growth", href: "/teams/strategic-growth" },
+  { id: "node-contact", label: "Start a Conversation", href: "/contact" }
+];
+
+const homeMotionConfig = {
+  sequenceHeightDesktop: 620,
+  sequenceHeightMobile: 560,
+  animation: {
+    revealDuration: 0.8,
+    revealY: 24,
+    magneticScale: 1.02
+  },
+  stars: {
+    desktopCount: 920,
+    mobileCount: 520,
+    depth: 1600,
+    baseSpeed: 0.28,
+    warpBoost: 5.2
+  },
+  orbit: {
+    start: 0.76,
+    full: 0.93,
+    radiusDesktop: 300,
+    radiusMobile: 195
+  }
+};
+---
+
+<Layout
+  title="Vista Site Selection | Reimagined"
+  description="Responsive, motion-forward concept for Vista Site Selection featuring immersive storytelling and bucketed specialty teams."
+>
+  <section id="heroSequenceWrapper" class="hero-sequence-wrapper" data-motion-config={JSON.stringify(homeMotionConfig)}>
+    <div class="hero-sequence-sticky">
+      <canvas id="heroWaveCanvas" class="hero-wave-canvas" aria-hidden="true"></canvas>
+      <div class="hero-noise-layer"></div>
+
+      <div class="section-shell hero-overlay-grid hero-overlay-grid--solo">
+        <div id="heroIntro" class="hero-stack">
+          <span class="chip chip--ghost">Site Selection + Incentives + Analytics</span>
+          <h1 id="heroHeadline" class="hero-title">
+            Decisions with <span class="text-[#ebaa1f]">weight</span>.<br />
+            Delivery with <span class="text-[#b5d9ee]">speed</span>.
+          </h1>
+          <p class="max-w-2xl text-lg text-white/80 md:text-xl">
+            Vista helps organizations pick the right locations, secure stronger incentives, and move with confidence
+            using data-backed strategy.
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <a class="btn-primary magnetic-btn" href={withBase("/contact")}>Start a conversation</a>
+            <a class="btn-secondary magnetic-btn btn-explore" href={withBase("/teams")}>Explore team buckets</a>
+            <button id="skipIntroBtn" class="btn-secondary hero-skip-btn btn-skip magnetic-btn" type="button">
+              Skip to orbit menu
+            </button>
+          </div>
+          <div class="hero-kicker-list">
+            <span class="mono">Board-ready strategy</span>
+            <span class="mono">Negotiation leverage</span>
+            <span class="mono">Execution certainty</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="heroSlideTrack" class="section-shell hero-slide-track">
+        <div class="hero-slide-frame">
+          {
+            heroSlides.map((slide, index) => (
+              <article class={`hero-slide ${index === 0 ? "is-active" : ""}`} data-slide>
+                <h2 class="hero-title">
+                  {slide.title.split("\n").map((line, lineIndex, lines) => (
+                    <>
+                      {line}
+                      {lineIndex < lines.length - 1 && <br />}
+                    </>
+                  ))}
+                </h2>
+              </article>
+            ))
+          }
+        </div>
+      </div>
+
+      <div id="orbitMenu" class="orbit-menu" aria-hidden="true">
+        <div class="orbit-core">
+          <img src={`${base}logos/vista-mark-white.png`} alt="Vista logo" />
+          <p class="mono">Vista Navigation Core</p>
+        </div>
+        {
+          orbitNodes.map((node, index) => (
+            <a
+              id={node.id}
+              href={withBase(node.href)}
+              class="orbit-node"
+              data-orbit-node
+              data-orbit-index={index}
+              aria-label={node.label}
+            >
+              <span>{node.label}</span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section-shell py-8">
+    <div class="metric-grid">
+      <article class="metric-tile" data-reveal>
+        <p class="stat-number text-[#ebaa1f]">1,000+</p>
+        <p class="mono text-sm text-white/75">PROJECTS SUPPORTED</p>
+      </article>
+      <article class="metric-tile" data-reveal>
+        <p class="stat-number text-[#b5d9ee]">$4B+</p>
+        <p class="mono text-sm text-white/75">INCENTIVES NEGOTIATED</p>
+      </article>
+      <article class="metric-tile" data-reveal>
+        <p class="stat-number text-white">40+</p>
+        <p class="mono text-sm text-white/75">MARKETS ANALYZED YEARLY</p>
+      </article>
+      <article class="metric-tile" data-reveal>
+        <p class="stat-number text-[#b22c2e]">24/7</p>
+        <p class="mono text-sm text-white/75">EXECUTION MINDSET</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section-shell py-16">
+    <div class="panel p-6 md:p-8" data-reveal>
+      <div class="mb-4 flex items-center justify-between gap-4">
+        <h2 class="text-3xl md:text-4xl">How Vista runs engagements</h2>
+        <span class="chip">Client Workflow</span>
+      </div>
+      <div class="process-rail">
+        <article>
+          <span class="mono">01</span>
+          <h3>Frame Decision</h3>
+          <p>Lock the strategic criteria and business constraints.</p>
+        </article>
+        <article>
+          <span class="mono">02</span>
+          <h3>Model Markets</h3>
+          <p>Score labor, cost, risk, and operational fit.</p>
+        </article>
+        <article>
+          <span class="mono">03</span>
+          <h3>Shape Incentives</h3>
+          <p>Build and negotiate package structures with leverage.</p>
+        </article>
+        <article>
+          <span class="mono">04</span>
+          <h3>Execute Confidently</h3>
+          <p>Move from selection to launch with implementation rigor.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-shell py-20">
+    <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div class="space-y-2">
+        <span class="chip">Bucketed Teams</span>
+        <h2 data-reveal class="text-4xl md:text-5xl">Specialized teams. One strategic engine.</h2>
+      </div>
+      <a href={withBase("/teams")} class="btn-secondary">View all teams</a>
+    </div>
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {
+        teamBuckets.map((team) => (
+          <a href={withBase(`/teams/${team.slug}`)} class="team-card" style={`--bucket-color:${team.accent};`} data-reveal>
+            <p class="mono mb-4 text-xs text-white/70">{team.shortName}</p>
+            <h3 class="mb-3 text-2xl">{team.name}</h3>
+            <p class="text-sm text-white/78">{team.summary}</p>
+            <p class="mt-6 text-sm font-semibold text-white">Meet experts -></p>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="section-shell py-8">
+    <div class="grid gap-4 lg:grid-cols-3">
+      <article class="panel p-6" data-reveal>
+        <h3 class="mb-3 text-2xl">How We Win</h3>
+        <p class="text-white/80">We combine site strategy, incentives, and analytics from day one.</p>
+      </article>
+      <article class="panel p-6" data-reveal>
+        <h3 class="mb-3 text-2xl">How We De-risk</h3>
+        <p class="text-white/80">We model downside early and align governance before execution starts.</p>
+      </article>
+      <article class="panel p-6" data-reveal>
+        <h3 class="mb-3 text-2xl">How We Differentiate</h3>
+        <p class="text-white/80">We turn technical analysis into clear executive choices fast.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section-shell py-20">
+    <div class="grid gap-4 lg:grid-cols-2">
+      <article class="rounded-2xl border border-white/12 bg-[#b22c2e] p-7 text-white" data-reveal>
+        <p class="mono mb-4 text-sm">Case Snapshot</p>
+        <h3 class="mb-3 text-3xl">Large Manufacturing Relocation</h3>
+        <p class="mb-4 text-white/90">
+          Vista built a multi-state strategy, secured incentive lift, and reduced timeline risk with implementation-ready
+          guidance.
+        </p>
+        <p class="mono text-sm">Outcome: Faster launch + stronger economics</p>
+      </article>
+      <article class="rounded-2xl border border-white/12 bg-[#1b2429] p-7" data-reveal>
+        <p class="mono mb-4 text-sm text-white/75">Case Snapshot</p>
+        <h3 class="mb-3 text-3xl text-[#b5d9ee]">Mission-Critical Facility Expansion</h3>
+        <p class="mb-4 text-white/85">
+          Data center and incentives teams aligned utility depth, market access, and jurisdiction strategy to compress
+          decision cycles.
+        </p>
+        <p class="mono text-sm text-white/70">Outcome: Better confidence at board approval</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section-shell pb-18">
+    <div class="panel rounded-2xl p-8 text-center">
+      <span class="chip">Ready to move?</span>
+      <h2 data-reveal class="mt-4 text-4xl md:text-5xl">Bring us your toughest location decision.</h2>
+      <p class="mx-auto mt-4 max-w-2xl text-lg text-white/80">
+        We will shape options, pressure-test assumptions, and build a strategy your leadership can stand behind.
+      </p>
+      <div class="mt-7 flex flex-wrap justify-center gap-3">
+        <a class="btn-primary magnetic-btn" href={withBase("/contact")}>Talk to Vista</a>
+        <a class="btn-secondary magnetic-btn" href={withBase("/teams/incentives")}>Speak with Incentives team</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { initializeHomePageMotion } from "../scripts/homeMotion";
+
+  let cleanupHomeMotion = null;
+
+  const mountHomeMotion = () => {
+    cleanupHomeMotion?.();
+    cleanupHomeMotion = initializeHomePageMotion();
+  };
+
+  mountHomeMotion();
+  document.addEventListener("astro:page-load", mountHomeMotion);
+  document.addEventListener("astro:before-swap", () => {
+    cleanupHomeMotion?.();
+    cleanupHomeMotion = null;
+  });
+</script>
