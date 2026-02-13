@@ -3,7 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 import { teamBuckets } from "../../data/teams";
 
 const base = import.meta.env.BASE_URL;
-const withBase = (path) => `${base}${path.replace(/^\\//, "")}`;
+const withBase = (path) => `${base}${path.startsWith("/") ? path.slice(1) : path}`;
 ---
 
 <Layout title="Vista Teams | Specialty Buckets">
