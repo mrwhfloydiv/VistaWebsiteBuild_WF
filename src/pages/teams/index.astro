@@ -3,7 +3,8 @@ import Layout from "../../layouts/Layout.astro";
 import { teamBuckets } from "../../data/teams";
 
 const base = import.meta.env.BASE_URL;
-const withBase = (path) => `${base}${path.startsWith("/") ? path.slice(1) : path}`;
+const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
+const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(1) : path}`;
 ---
 
 <Layout title="Vista Teams | Specialty Buckets">
@@ -23,7 +24,7 @@ const withBase = (path) => `${base}${path.startsWith("/") ? path.slice(1) : path
           <a href={withBase(`/teams/${team.slug}`)} class="team-card" style={`--bucket-color:${team.accent};`}>
             <p class="mono mb-3 text-xs text-white/70">{team.shortName}</p>
             <h2 class="mb-3 text-2xl">{team.name}</h2>
-            <p class="text-sm text-white/78">{team.summary}</p>
+            <p class="text-sm text-white/75">{team.summary}</p>
             <p class="mt-5 text-sm font-semibold">Open team page →</p>
           </a>
         ))

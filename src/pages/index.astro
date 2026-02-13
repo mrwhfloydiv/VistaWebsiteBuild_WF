@@ -3,7 +3,8 @@ import Layout from "../layouts/Layout.astro";
 import { teamBuckets } from "../data/teams";
 
 const base = import.meta.env.BASE_URL;
-const withBase = (path) => `${base}${path.startsWith("/") ? path.slice(1) : path}`;
+const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
+const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(1) : path}`;
 
 const heroSlides = [
   {
@@ -110,7 +111,7 @@ const homeMotionConfig = {
 
       <div id="orbitMenu" class="orbit-menu" aria-hidden="true">
         <div class="orbit-core">
-          <img src={`${base}logos/vista-mark-white.png`} alt="Vista logo" />
+          <img src={withBase("/logos/vista-mark-white.png")} alt="" />
           <p class="mono">Vista Navigation Core</p>
         </div>
         {
@@ -197,7 +198,7 @@ const homeMotionConfig = {
           <a href={withBase(`/teams/${team.slug}`)} class="team-card" style={`--bucket-color:${team.accent};`} data-reveal>
             <p class="mono mb-4 text-xs text-white/70">{team.shortName}</p>
             <h3 class="mb-3 text-2xl">{team.name}</h3>
-            <p class="text-sm text-white/78">{team.summary}</p>
+            <p class="text-sm text-white/75">{team.summary}</p>
             <p class="mt-6 text-sm font-semibold text-white">Meet experts -></p>
           </a>
         ))

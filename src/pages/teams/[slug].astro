@@ -11,17 +11,18 @@ export function getStaticPaths() {
 
 const { team } = Astro.props;
 const base = import.meta.env.BASE_URL;
-const withBase = (path) => `${base}${path.startsWith("/") ? path.slice(1) : path}`;
+const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
+const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(1) : path}`;
 ---
 
 <Layout title={`${team.name} | Vista Site Selection`}>
   <section class="section-shell py-14">
     <div class="mb-5 flex items-center gap-3">
-      <a href={withBase("/teams")} class="btn-secondary !px-3 !py-1.5 !text-xs"><- All teams</a>
+      <a href={withBase("/teams")} class="btn-secondary btn-sm"><- All teams</a>
       <span class="chip">{team.shortName}</span>
     </div>
     <h1 class="text-5xl md:text-6xl">{team.name}</h1>
-    <p class="mt-5 max-w-3xl text-lg text-white/82">{team.summary}</p>
+    <p class="mt-5 max-w-3xl text-lg text-white/80">{team.summary}</p>
   </section>
 
   <section class="section-shell grid gap-4 pb-8 lg:grid-cols-2">

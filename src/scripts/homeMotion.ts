@@ -607,7 +607,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
 
   const scrollToOrbit = () => {
     const maxScrollable = Math.max(wrapper.offsetHeight - window.innerHeight, 0);
-    const orbitTargetTop = wrapper.offsetTop + maxScrollable * config.orbit.start;
+    const orbitTargetTop = wrapper.offsetTop + maxScrollable * config.orbit.full;
     window.scrollTo({ top: orbitTargetTop, behavior: reduceMotion ? "auto" : "smooth" });
   };
 

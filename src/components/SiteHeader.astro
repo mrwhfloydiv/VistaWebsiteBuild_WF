@@ -15,14 +15,15 @@ const normalizePath = (path) => (path.replace(/\/$/, "") || "/");
 const currentNormalized = normalizePath(
   currentPath.startsWith(basePath) ? currentPath.slice(basePath.length) : currentPath
 );
-const withBase = (path) => `${base}${path.startsWith("/") ? path.slice(1) : path}`;
+const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
+const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(1) : path}`;
 ---
 
 <header id="siteHeader" class="site-header sticky top-0 z-50">
   <div class="section-shell flex h-18 items-center justify-between gap-3">
     <a href={withBase("/")} class="flex items-center gap-3 font-semibold tracking-tight">
       <img
-        src={`${base}logos/simplified-white-text-red-arrow.png`}
+        src={withBase("/logos/simplified-white-text-red-arrow.png")}
         alt="Vista Site Selection"
         class="h-4 w-auto object-contain"
       />
