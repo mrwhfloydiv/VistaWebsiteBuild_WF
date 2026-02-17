@@ -21,15 +21,33 @@ const heroSlides = [
   }
 ];
 
-const orbitNodes = [
-  { id: "node-eis", label: "Economic Impact Studies", href: "/teams/economic-impact-studies" },
-  { id: "node-aerospace", label: "Aerospace & Defense", href: "/teams/aerospace-defense" },
-  { id: "node-data", label: "Data & Analytics", href: "/teams/data-analytics" },
-  { id: "node-datacenters", label: "Data Centers", href: "/teams/data-centers" },
-  { id: "node-incentives", label: "Incentives", href: "/teams/incentives" },
-  { id: "node-growth", label: "Strategic Growth", href: "/teams/strategic-growth" },
-  { id: "node-contact", label: "Start a Conversation", href: "/contact" }
+const orbitNodeMap = [
+  { slug: "economic-impact-studies", id: "node-eis" },
+  { slug: "aerospace-defense",      id: "node-aerospace" },
+  { slug: "data-analytics",         id: "node-data" },
+  { slug: "data-centers",           id: "node-datacenters" },
+  { slug: "incentives",             id: "node-incentives" },
+  { slug: "strategic-growth",       id: "node-growth" },
 ];
+
+const orbitNodes = orbitNodeMap.map(({ slug, id }) => {
+  const team = teamBuckets.find(t => t.slug === slug)!;
+  return {
+    id,
+    label: team.name,
+    shortName: team.shortName,
+    accent: team.accent,
+    description: team.summary.split(".")[0] + ".",
+    href: `/teams/${slug}`,
+  };
+}).concat([{
+  id: "node-contact",
+  label: "Start a Conversation",
+  shortName: "COMMS",
+  accent: "#b5d9ee",
+  description: "Reach the Vista team directly.",
+  href: "/contact",
+}]);
 
 const homeMotionConfig = {
   sequenceHeightDesktop: 620,
@@ -63,6 +81,7 @@ const homeMotionConfig = {
     <div class="hero-sequence-sticky">
       <canvas id="heroWaveCanvas" class="hero-wave-canvas" aria-hidden="true"></canvas>
       <div class="hero-noise-layer"></div>
+      <div class="hero-scanline-layer" aria-hidden="true"></div>
 
       <div class="section-shell hero-overlay-grid hero-overlay-grid--solo">
         <div id="heroIntro" class="hero-stack">
@@ -122,9 +141,14 @@ const homeMotionConfig = {
               class="orbit-node"
               data-orbit-node
               data-orbit-index={index}
+              data-accent={node.accent}
+              data-desc={node.description}
+              data-short={node.shortName}
               aria-label={node.label}
             >
-              <span>{node.label}</span>
+              <span class="orbit-node__label">{node.label}</span>
+              <span class="orbit-node__desc">{node.description}</span>
+              <span class="orbit-node__arrow" aria-hidden="true">&rarr;</span>
             </a>
           ))
         }

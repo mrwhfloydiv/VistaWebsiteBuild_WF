@@ -338,6 +338,7 @@ a {
   transform: translate(-50%, -50%) scale(1);
 }
 
+/* Canvas planet replaces DOM core — keep as no-JS fallback */
 .orbit-core {
   position: absolute;
   left: 50%;
@@ -378,27 +379,108 @@ a {
   top: 50%;
   transform: translate(-50%, -50%);
   border: 1px solid rgba(250, 250, 250, 0.16);
-  border-radius: 999px;
+  border-radius: 1rem;
   background: linear-gradient(145deg, rgba(16, 21, 30, 0.84), rgba(16, 21, 30, 0.5));
   padding: 0.62rem 0.9rem;
   min-width: 178px;
-  max-width: 244px;
+  max-width: 260px;
   text-decoration: none;
   pointer-events: auto;
   opacity: 0;
-  transition: border-color 0.22s ease, background-color 0.22s ease, opacity 0.28s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  max-height: 2.8rem;
+  transition: border-color 0.22s ease, background-color 0.22s ease,
+              opacity 0.28s ease, max-height 0.28s ease, padding 0.22s ease;
 }
 
-.orbit-node span {
+.orbit-node__label {
   display: block;
   font-size: 0.84rem;
   line-height: 1.2;
   color: rgba(250, 250, 250, 0.9);
+  white-space: nowrap;
 }
 
-.orbit-node:hover {
+.orbit-node__desc {
+  display: block;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  color: rgba(250, 250, 250, 0.55);
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  margin-top: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.2s ease;
+}
+
+.orbit-node__arrow {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: rgba(250, 250, 250, 0.5);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  position: absolute;
+  right: 0.9rem;
+  top: 0.62rem;
+}
+
+.orbit-node:hover,
+.orbit-node:focus-visible,
+.orbit-node.is-expanded {
+  max-height: 5.5rem;
+  padding: 0.7rem 2rem 0.7rem 0.9rem;
   border-color: rgba(250, 250, 250, 0.38);
   background: linear-gradient(145deg, rgba(25, 31, 42, 0.92), rgba(20, 26, 37, 0.62));
+}
+
+.orbit-node:hover .orbit-node__desc,
+.orbit-node:focus-visible .orbit-node__desc,
+.orbit-node.is-expanded .orbit-node__desc {
+  max-height: 2.6rem;
+  opacity: 1;
+  margin-top: 0.25rem;
+}
+
+.orbit-node:hover .orbit-node__arrow,
+.orbit-node:focus-visible .orbit-node__arrow,
+.orbit-node.is-expanded .orbit-node__arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Scanline overlay for orbit phase */
+.hero-scanline-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.04) 2px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+  mix-blend-mode: multiply;
+  transition: opacity 0.6s ease;
+  z-index: 1;
+}
+
+.hero-sequence-wrapper.is-orbit-phase .hero-scanline-layer {
+  opacity: 0.45;
+}
+
+/* Custom reticle cursor in orbit zone */
+.hero-sequence-wrapper.is-orbit-phase {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='none' stroke='%234a94ff' stroke-width='1' opacity='0.7'/%3E%3Ccircle cx='12' cy='12' r='2' fill='%234a94ff' opacity='0.9'/%3E%3Cline x1='12' y1='0' x2='12' y2='6' stroke='%234a94ff' stroke-width='0.5' opacity='0.5'/%3E%3Cline x1='12' y1='18' x2='12' y2='24' stroke='%234a94ff' stroke-width='0.5' opacity='0.5'/%3E%3Cline x1='0' y1='12' x2='6' y2='12' stroke='%234a94ff' stroke-width='0.5' opacity='0.5'/%3E%3Cline x1='18' y1='12' x2='24' y2='12' stroke='%234a94ff' stroke-width='0.5' opacity='0.5'/%3E%3C/svg%3E") 12 12, crosshair;
+}
+
+.hero-sequence-wrapper.is-orbit-phase .orbit-node {
+  cursor: pointer;
 }
 
 .hero-slide-frame {
@@ -515,13 +597,21 @@ a {
   }
 
   .orbit-node {
-    min-width: 130px;
-    max-width: 180px;
-    padding: 0.5rem 0.66rem;
+    min-width: 140px;
+    max-width: 200px;
+    padding: 0.65rem 0.8rem;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    max-height: 3rem;
   }
 
-  .orbit-node span {
-    font-size: 0.74rem;
+  .orbit-node__label {
+    font-size: 0.78rem;
+  }
+
+  .orbit-node__desc {
+    font-size: 0.62rem;
   }
 
   .metric-grid {
@@ -530,5 +620,35 @@ a {
 
   .process-rail {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 380px) {
+  .orbit-menu.is-active {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 92vw;
+    height: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0;
+  }
+
+  .orbit-node {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    opacity: 1 !important;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    border-radius: 0.75rem;
   }
 }

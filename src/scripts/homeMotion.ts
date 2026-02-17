@@ -52,6 +52,21 @@ type Star = {
   initialized: boolean;
 };
 
+type RingParticle = {
+  ring: number;
+  angle: number;
+  speed: number;
+  size: number;
+  brightness: number;
+  tailLength: number;
+};
+
+const hexToRGB = (hex: string): ColorRGB => [
+  parseInt(hex.slice(1, 3), 16),
+  parseInt(hex.slice(3, 5), 16),
+  parseInt(hex.slice(5, 7), 16)
+];
+
 const defaultConfig: MotionConfig = {
   sequenceHeightDesktop: 520,
   sequenceHeightMobile: 470,
@@ -264,6 +279,226 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   let targetMouseX = 0;
   let targetMouseY = 0;
   let lastTime = performance.now();
+  let nodesHaveEntered = false;
+  let touchSpinOffset = 0;
+  let touchSpinVelocity = 0;
+  let isTouchDragging = false;
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  // Load V logo for canvas planet compositing
+  const vLogo = new Image();
+  const coreImg = orbitCore?.querySelector("img") as HTMLImageElement | null;
+  vLogo.src = coreImg?.src ?? "";
+  let vLogoReady = false;
+  vLogo.onload = () => { vLogoReady = true; };
+
+  // Hide DOM orbit core — canvas planet replaces it
+  if (orbitCore) orbitCore.style.display = "none";
+
+  // ── Planet texture system (offscreen canvases) ──
+  const planetTexW = 800;
+  const planetTexH = 400;
+  const planetTexCanvas = document.createElement("canvas");
+  planetTexCanvas.width = planetTexW;
+  planetTexCanvas.height = planetTexH;
+  const planetTexCtx = planetTexCanvas.getContext("2d")!;
+
+  // Cloud layer offscreen
+  const cloudTexCanvas = document.createElement("canvas");
+  cloudTexCanvas.width = planetTexW;
+  cloudTexCanvas.height = planetTexH;
+  const cloudTexCtx = cloudTexCanvas.getContext("2d")!;
+
+  // Sphere render buffer (planet-sized, reused each frame)
+  const sphereSize = isMobile ? 148 : 210;
+  const sphereCanvas = document.createElement("canvas");
+  sphereCanvas.width = sphereSize;
+  sphereCanvas.height = sphereSize;
+  const sphereCtx = sphereCanvas.getContext("2d")!;
+  sphereCtx.imageSmoothingEnabled = true;
+  sphereCtx.imageSmoothingQuality = "high";
+
+  // Pre-generate cloud wisps
+  type CloudWisp = { x: number; y: number; w: number; h: number; opacity: number; };
+  const cloudWisps: CloudWisp[] = [];
+  for (let i = 0; i < 36; i++) {
+    cloudWisps.push({
+      x: Math.random() * planetTexW,
+      y: 40 + Math.random() * (planetTexH - 80),
+      w: 50 + Math.random() * 160,
+      h: 10 + Math.random() * 22,
+      opacity: 0.15 + Math.random() * 0.25,
+    });
+  }
+
+  // Bake the planet ocean texture (called once + when logo loads)
+  let planetTextureReady = false;
+  const bakePlanetTexture = () => {
+    const ctx = planetTexCtx;
+    ctx.clearRect(0, 0, planetTexW, planetTexH);
+
+    // Deep ocean gradient (latitude bands)
+    const oceanGrad = ctx.createLinearGradient(0, 0, 0, planetTexH);
+    oceanGrad.addColorStop(0, "#061e36");
+    oceanGrad.addColorStop(0.12, "#0a2e52");
+    oceanGrad.addColorStop(0.3, "#124878");
+    oceanGrad.addColorStop(0.45, "#1a6498");
+    oceanGrad.addColorStop(0.55, "#1e72a8");
+    oceanGrad.addColorStop(0.7, "#124878");
+    oceanGrad.addColorStop(0.88, "#0a2e52");
+    oceanGrad.addColorStop(1, "#061e36");
+    ctx.fillStyle = oceanGrad;
+    ctx.fillRect(0, 0, planetTexW, planetTexH);
+
+    // Ocean shimmer / current streaks
+    ctx.globalAlpha = 1;
+    for (let i = 0; i < 22; i++) {
+      const sy = 30 + Math.random() * (planetTexH - 60);
+      const sw = 60 + Math.random() * 250;
+      const sx = Math.random() * planetTexW;
+      const streak = ctx.createLinearGradient(sx, sy, sx + sw, sy);
+      streak.addColorStop(0, "rgba(30, 120, 180, 0)");
+      streak.addColorStop(0.3, `rgba(50, 170, 220, ${0.08 + Math.random() * 0.08})`);
+      streak.addColorStop(0.7, `rgba(40, 150, 200, ${0.04 + Math.random() * 0.06})`);
+      streak.addColorStop(1, "rgba(30, 120, 180, 0)");
+      ctx.fillStyle = streak;
+      ctx.fillRect(sx, sy - 2 - Math.random() * 3, sw, 4 + Math.random() * 4);
+    }
+
+    // Subtle ocean noise texture (small bright dots)
+    ctx.globalAlpha = 0.04;
+    for (let i = 0; i < 300; i++) {
+      const nx = Math.random() * planetTexW;
+      const ny = Math.random() * planetTexH;
+      ctx.fillStyle = "#8ec8f0";
+      ctx.fillRect(nx, ny, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+
+    // Stamp V logo as "continental landmass"
+    if (vLogoReady) {
+      ctx.save();
+      const logoAspect = vLogo.width / Math.max(vLogo.height, 1);
+      const logoH = planetTexH * 0.65;
+      const logoW = logoH * logoAspect;
+      const logoY = (planetTexH - logoH) / 2;
+
+      for (let copy = 0; copy < 2; copy++) {
+        const logoX = (planetTexW * 0.5 - logoW / 2) + copy * planetTexW;
+
+        // Soft shadow
+        ctx.globalAlpha = 0.2;
+        ctx.globalCompositeOperation = "multiply";
+        ctx.drawImage(vLogo, logoX + 3, logoY + 3, logoW, logoH);
+
+        // Main continent layer
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 0.55;
+        ctx.drawImage(vLogo, logoX, logoY, logoW, logoH);
+
+        // Warm earth tint overlay (draw on top, blended)
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 0.12;
+        const tintGrad = ctx.createLinearGradient(logoX, logoY, logoX, logoY + logoH);
+        tintGrad.addColorStop(0, "#a08040");
+        tintGrad.addColorStop(0.5, "#c8a050");
+        tintGrad.addColorStop(1, "#806830");
+        ctx.fillStyle = tintGrad;
+        ctx.fillRect(logoX, logoY, logoW, logoH);
+      }
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    planetTextureReady = true;
+  };
+
+  // Bake on logo load
+  vLogo.onload = () => {
+    vLogoReady = true;
+    bakePlanetTexture();
+  };
+  // Bake initial (no logo yet)
+  bakePlanetTexture();
+
+  const updateCloudTexture = (nowSeconds: number) => {
+    const ctx = cloudTexCtx;
+    ctx.clearRect(0, 0, planetTexW, planetTexH);
+
+    for (const wisp of cloudWisps) {
+      const wx = (wisp.x + nowSeconds * 10) % (planetTexW + wisp.w) - wisp.w * 0.5;
+      const wavey = wisp.y + Math.sin(nowSeconds * 0.25 + wisp.x * 0.015) * 5;
+      const grad = ctx.createRadialGradient(
+        wx + wisp.w * 0.5, wavey, 0,
+        wx + wisp.w * 0.5, wavey, wisp.w * 0.52
+      );
+      grad.addColorStop(0, `rgba(255, 255, 255, ${wisp.opacity})`);
+      grad.addColorStop(0.3, `rgba(245, 250, 255, ${wisp.opacity * 0.65})`);
+      grad.addColorStop(0.7, `rgba(230, 240, 250, ${wisp.opacity * 0.2})`);
+      grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(wx + wisp.w * 0.5, wavey, wisp.w * 0.5, wisp.h * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+
+  // Render equirectangular texture onto sphere buffer
+  const renderSphereTexture = (nowSeconds: number) => {
+    const ctx = sphereCtx;
+    ctx.clearRect(0, 0, sphereSize, sphereSize);
+
+    const rotation = reduceMotion ? scrollProgress * Math.PI * 2 : nowSeconds * 0.12;
+    const texScrollPx = (rotation / (Math.PI * 2)) * planetTexW;
+    const cloudScrollPx = texScrollPx * 1.25; // Clouds drift faster
+    const srcW = 3; // Sample 3px wide strips for smooth interpolation
+    const destW = 2; // Draw 2px wide columns with overlap for seamless fill
+
+    for (let col = 0; col < sphereSize; col += destW) {
+      const xNorm = ((col + destW * 0.5) / sphereSize) * 2 - 1; // -1 to 1, centered
+      if (Math.abs(xNorm) > 0.995) continue;
+
+      const lon = Math.asin(clamp(xNorm, -0.99, 0.99));
+      const cosLon = Math.cos(lon);
+      const colHeight = cosLon * sphereSize;
+      if (colHeight < 1) continue;
+
+      const destY = (sphereSize - colHeight) * 0.5;
+
+      // Map longitude to texture U coordinate
+      const texU = ((lon / Math.PI + 0.5) * planetTexW + texScrollPx) % planetTexW;
+      const srcX = ((Math.floor(texU) - 1) + planetTexW) % planetTexW;
+
+      // Ocean + landmass (wider source strip for smooth interpolation)
+      ctx.drawImage(planetTexCanvas, srcX, 0, srcW, planetTexH, col, destY, destW, colHeight);
+
+      // Cloud layer (different scroll speed, slightly transparent)
+      ctx.globalAlpha = 0.75;
+      const cloudU = ((lon / Math.PI + 0.5) * planetTexW + cloudScrollPx) % planetTexW;
+      const cloudSrcX = ((Math.floor(cloudU) - 1) + planetTexW) % planetTexW;
+      ctx.drawImage(cloudTexCanvas, cloudSrcX, 0, srcW, planetTexH, col, destY, destW, colHeight);
+      ctx.globalAlpha = 1;
+    }
+  };
+
+  // Node accent colors from data attributes
+  const nodeAccents = orbitNodes.map(node => ({
+    accent: node.dataset.accent ?? "#ffffff",
+    rgb: hexToRGB(node.dataset.accent ?? "#ffffff"),
+    desc: node.dataset.desc ?? "",
+    short: node.dataset.short ?? "",
+  }));
+
+  // Ring particle system
+  const ringParticleCount = lowPowerDevice ? (isMobile ? 12 : 24) : (isMobile ? 24 : 48);
+  const ringParticles: RingParticle[] = Array.from({ length: ringParticleCount }, () => ({
+    ring: Math.floor(Math.random() * 4) + 1,
+    angle: Math.random() * Math.PI * 2,
+    speed: (0.15 + Math.random() * 0.25) * (Math.random() > 0.5 ? 1 : -1),
+    size: 0.8 + Math.random() * 1.2,
+    brightness: 0.4 + Math.random() * 0.6,
+    tailLength: 3 + Math.floor(Math.random() * 5),
+  }));
 
   const orbitAngles = orbitNodes.map((_, index) => (index / Math.max(orbitNodes.length, 1)) * Math.PI * 2 - Math.PI / 2);
 
@@ -350,23 +585,241 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     context.fillRect(0, 0, width, height);
   };
 
-  const drawOrbitRings = (orbitReveal: number) => {
+  const drawOrbitRings = (nowSeconds: number, orbitReveal: number, delta: number) => {
     if (orbitReveal <= 0.02) return;
 
     const centerX = width * 0.5;
     const centerY = height * 0.52;
     const radius = (isMobile ? config.orbit.radiusMobile : config.orbit.radiusDesktop) * (0.72 + orbitReveal * 0.32);
+    const tiltX = mouseX * 0.04;
+    const tiltY = mouseY * 0.03;
+    const breathe = 0.85 + Math.sin(nowSeconds * 0.7) * 0.15;
 
     context.save();
-    context.strokeStyle = `rgba(188, 206, 235, ${0.07 + orbitReveal * 0.14})`;
-    context.lineWidth = 1;
 
-    for (let ring = 1; ring <= 4; ring += 1) {
+    // Draw rings with depth variation
+    for (let ring = 1; ring <= 4; ring++) {
       const ringRadius = radius * (0.52 + ring * 0.2);
+      const depthFactor = 0.4 + (ring / 4) * 0.6;
+      const ringAlpha = (0.07 + orbitReveal * 0.14) * depthFactor * breathe;
+      const parallaxScale = 0.5 + (ring / 4) * 0.5;
+      const offsetX = tiltX * ringRadius * parallaxScale * 0.5;
+      const offsetY = tiltY * ringRadius * parallaxScale * 0.3;
+
+      context.strokeStyle = `rgba(188, 206, 235, ${ringAlpha})`;
+      context.lineWidth = 0.6 + ring * 0.15;
       context.beginPath();
-      context.ellipse(centerX, centerY, ringRadius, ringRadius * 0.6, 0, 0, Math.PI * 2);
+      context.ellipse(centerX + offsetX, centerY + offsetY, ringRadius, ringRadius * 0.6, 0, 0, Math.PI * 2);
       context.stroke();
     }
+
+    // Ring particles
+    if (!reduceMotion) {
+      for (const particle of ringParticles) {
+        particle.angle += particle.speed * delta * 0.016;
+
+        const ringRadius = radius * (0.52 + particle.ring * 0.2);
+        const parallaxScale = 0.5 + (particle.ring / 4) * 0.5;
+        const offsetX = tiltX * ringRadius * parallaxScale * 0.5;
+        const offsetY = tiltY * ringRadius * parallaxScale * 0.3;
+
+        const px = centerX + offsetX + Math.cos(particle.angle) * ringRadius;
+        const py = centerY + offsetY + Math.sin(particle.angle) * ringRadius * 0.6;
+        const depthMix = (Math.sin(particle.angle) + 1) * 0.5;
+        const particleAlpha = orbitReveal * particle.brightness * (0.3 + depthMix * 0.7) * breathe;
+
+        // Glow tail
+        for (let t = particle.tailLength; t >= 0; t--) {
+          const tailAngle = particle.angle - (particle.speed > 0 ? 1 : -1) * t * 0.03;
+          const tx = centerX + offsetX + Math.cos(tailAngle) * ringRadius;
+          const ty = centerY + offsetY + Math.sin(tailAngle) * ringRadius * 0.6;
+          const tailAlpha = particleAlpha * (1 - t / (particle.tailLength + 1)) * 0.5;
+          const tailSize = particle.size * (1 - t * 0.08);
+
+          context.fillStyle = `rgba(160, 200, 255, ${tailAlpha})`;
+          context.beginPath();
+          context.arc(tx, ty, Math.max(tailSize, 0.3), 0, Math.PI * 2);
+          context.fill();
+        }
+
+        // Particle head
+        context.fillStyle = `rgba(200, 225, 255, ${particleAlpha})`;
+        context.beginPath();
+        context.arc(px, py, particle.size, 0, Math.PI * 2);
+        context.fill();
+
+        // Tiny glow
+        if (particle.size > 1) {
+          const glowGrad = context.createRadialGradient(px, py, 0, px, py, particle.size * 3);
+          glowGrad.addColorStop(0, `rgba(160, 200, 255, ${particleAlpha * 0.25})`);
+          glowGrad.addColorStop(1, "rgba(160, 200, 255, 0)");
+          context.fillStyle = glowGrad;
+          context.beginPath();
+          context.arc(px, py, particle.size * 3, 0, Math.PI * 2);
+          context.fill();
+        }
+      }
+    }
+
+    context.restore();
+  };
+
+  const drawSpokes = (nowSeconds: number, orbitReveal: number) => {
+    if (orbitReveal <= 0.3) return;
+
+    const cx = width * 0.5;
+    const cy = height * 0.52;
+    const radius = (isMobile ? config.orbit.radiusMobile : config.orbit.radiusDesktop) * (0.9 + orbitReveal * 0.24);
+    const ellipseRatio = isMobile ? 0.66 : 0.58;
+
+    touchSpinVelocity *= 0.95;
+    if (Math.abs(touchSpinVelocity) > 0.0001) touchSpinOffset += touchSpinVelocity;
+
+    const baseSpin = reduceMotion
+      ? scrollProgress * Math.PI * 0.58 + touchSpinOffset
+      : nowSeconds * 0.17 + scrollProgress * Math.PI * 0.55 + touchSpinOffset;
+    const spokeAlpha = clamp((orbitReveal - 0.3) * 2, 0, 0.25);
+
+    context.save();
+    context.lineWidth = 0.5;
+
+    orbitNodes.forEach((_, index) => {
+      const angle = orbitAngles[index] + baseSpin;
+      const x = cx + Math.cos(angle) * radius + mouseX * 14;
+      const y = cy + Math.sin(angle) * radius * ellipseRatio + mouseY * 10;
+      const depthMix = (Math.sin(angle) + 1) * 0.5;
+      const { rgb } = nodeAccents[index];
+
+      const grad = context.createLinearGradient(cx, cy, x, y);
+      grad.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`);
+      grad.addColorStop(0.4, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${spokeAlpha * depthMix})`);
+      grad.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${spokeAlpha * depthMix * 0.6})`);
+
+      context.strokeStyle = grad;
+      context.beginPath();
+      context.moveTo(cx, cy);
+      context.lineTo(x, y);
+      context.stroke();
+    });
+
+    context.restore();
+  };
+
+  const drawPlanet = (nowSeconds: number, orbitReveal: number) => {
+    if (orbitReveal <= 0.02) return;
+
+    const cx = width * 0.5;
+    const cy = height * 0.52;
+    const baseR = isMobile ? 62 : 90;
+    const planetRadius = baseR * (0.85 + orbitReveal * 0.2);
+    const planetAlpha = clamp(orbitReveal * 1.4, 0, 1);
+    const glowPulse = reduceMotion ? 0.65 : 0.5 + Math.sin(nowSeconds * 1.8) * 0.3;
+    const diameter = planetRadius * 2;
+
+    context.save();
+    context.globalAlpha = planetAlpha;
+
+    // ── Outer atmosphere glow (3 layers for rich blue haze) ──
+    const glowLayers = [
+      { scale: 2.4, alpha: 0.035, color: "50, 130, 255" },
+      { scale: 1.75, alpha: 0.07, color: "65, 150, 255" },
+      { scale: 1.38, alpha: 0.13, color: "80, 170, 255" },
+    ];
+    for (const layer of glowLayers) {
+      const gr = planetRadius * (layer.scale + glowPulse * 0.06);
+      const grd = context.createRadialGradient(cx, cy, planetRadius * 0.82, cx, cy, gr);
+      grd.addColorStop(0, `rgba(${layer.color}, ${layer.alpha * glowPulse})`);
+      grd.addColorStop(0.5, `rgba(${layer.color}, ${layer.alpha * 0.35 * glowPulse})`);
+      grd.addColorStop(1, `rgba(${layer.color}, 0)`);
+      context.fillStyle = grd;
+      context.fillRect(cx - gr, cy - gr, gr * 2, gr * 2);
+    }
+
+    // ── Render sphere texture into offscreen buffer ──
+    if (planetTextureReady) {
+      renderSphereTexture(nowSeconds);
+
+      // Draw the sphere buffer onto the main canvas, scaled to planet size
+      context.drawImage(
+        sphereCanvas,
+        0, 0, sphereSize, sphereSize,
+        cx - planetRadius, cy - planetRadius, diameter, diameter
+      );
+    }
+
+    // ── Clip for overlays on sphere surface ──
+    context.save();
+    context.beginPath();
+    context.arc(cx, cy, planetRadius, 0, Math.PI * 2);
+    context.clip();
+
+    // ── Water shimmer / specular highlight (sun glint) ──
+    const shimPhase = reduceMotion ? 0 : nowSeconds * 0.4;
+    const shimX = cx - planetRadius * 0.32 + Math.sin(shimPhase) * planetRadius * 0.06;
+    const shimY = cy - planetRadius * 0.28 + Math.cos(shimPhase * 0.7) * planetRadius * 0.04;
+    const shimGrad = context.createRadialGradient(shimX, shimY, 0, shimX, shimY, planetRadius * 0.5);
+    shimGrad.addColorStop(0, `rgba(200, 235, 255, ${0.22 * glowPulse})`);
+    shimGrad.addColorStop(0.25, `rgba(160, 210, 255, ${0.09 * glowPulse})`);
+    shimGrad.addColorStop(1, "rgba(140, 200, 255, 0)");
+    context.fillStyle = shimGrad;
+    context.fillRect(cx - planetRadius, cy - planetRadius, diameter, diameter);
+
+    // ── Terminator shadow (day/night boundary) ──
+    const termGrad = context.createLinearGradient(cx - planetRadius, cy, cx + planetRadius, cy);
+    termGrad.addColorStop(0, "rgba(0, 0, 0, 0)");
+    termGrad.addColorStop(0.45, "rgba(0, 0, 0, 0)");
+    termGrad.addColorStop(0.68, "rgba(0, 0, 0, 0.2)");
+    termGrad.addColorStop(0.82, "rgba(0, 0, 0, 0.45)");
+    termGrad.addColorStop(0.95, "rgba(0, 0, 0, 0.65)");
+    termGrad.addColorStop(1, "rgba(0, 0, 0, 0.78)");
+    context.fillStyle = termGrad;
+    context.fillRect(cx - planetRadius, cy - planetRadius, diameter, diameter);
+
+    // ── 3D lighting (upper-left highlight for depth) ──
+    const lightGrad = context.createRadialGradient(
+      cx - planetRadius * 0.35, cy - planetRadius * 0.35, planetRadius * 0.02,
+      cx + planetRadius * 0.15, cy + planetRadius * 0.15, planetRadius * 1.05
+    );
+    lightGrad.addColorStop(0, "rgba(210, 235, 255, 0.14)");
+    lightGrad.addColorStop(0.25, "rgba(140, 195, 245, 0.05)");
+    lightGrad.addColorStop(0.7, "rgba(0, 0, 0, 0)");
+    lightGrad.addColorStop(1, "rgba(0, 0, 30, 0.08)");
+    context.fillStyle = lightGrad;
+    context.fillRect(cx - planetRadius, cy - planetRadius, diameter, diameter);
+
+    context.restore(); // End sphere clip
+
+    // ── Atmosphere rim light (bright blue edge like ISS Earth photos) ──
+    context.lineWidth = 3;
+    const rimGrad = context.createRadialGradient(
+      cx - planetRadius * 0.12, cy - planetRadius * 0.12, planetRadius * 0.78,
+      cx, cy, planetRadius * 1.06
+    );
+    rimGrad.addColorStop(0, "rgba(80, 160, 255, 0)");
+    rimGrad.addColorStop(0.65, `rgba(90, 175, 255, ${0.12 + glowPulse * 0.08})`);
+    rimGrad.addColorStop(0.85, `rgba(70, 155, 255, ${0.35 + glowPulse * 0.15})`);
+    rimGrad.addColorStop(1, `rgba(55, 135, 255, ${0.55 + glowPulse * 0.12})`);
+    context.strokeStyle = rimGrad;
+    context.beginPath();
+    context.arc(cx, cy, planetRadius, 0, Math.PI * 2);
+    context.stroke();
+
+    // Second thinner inner rim
+    context.lineWidth = 1.2;
+    context.strokeStyle = `rgba(170, 215, 255, ${0.2 + glowPulse * 0.08})`;
+    context.beginPath();
+    context.arc(cx, cy, planetRadius + 3, 0, Math.PI * 2);
+    context.stroke();
+
+    // ── HUD text below planet ──
+    context.globalAlpha = planetAlpha;
+    context.font = `${isMobile ? 8 : 9}px "IBM Plex Mono", monospace`;
+    context.textAlign = "center";
+    context.fillStyle = `rgba(250, 250, 250, ${0.45 * planetAlpha})`;
+    context.fillText("NAVIGATION CORE", cx, cy + planetRadius + (isMobile ? 16 : 22));
+    context.font = `${isMobile ? 7 : 7.5}px "IBM Plex Mono", monospace`;
+    context.fillStyle = `rgba(250, 250, 250, ${0.28 * planetAlpha})`;
+    context.fillText(`${orbitNodes.length} SECTORS ACTIVE`, cx, cy + planetRadius + (isMobile ? 24 : 31));
 
     context.restore();
   };
@@ -472,22 +925,45 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     orbitMenu.classList.toggle("is-active", visible);
     orbitMenu.setAttribute("aria-hidden", visible ? "false" : "true");
 
-    if (!visible) return;
+    if (!visible) {
+      nodesHaveEntered = false;
+      return;
+    }
+
+    const isNarrowStack = width < 380;
+    if (isNarrowStack) {
+      orbitNodes.forEach(node => {
+        node.style.transform = "";
+        node.style.opacity = `${clamp(orbitReveal * 1.2, 0, 1)}`;
+      });
+      return;
+    }
 
     const radius = (isMobile ? config.orbit.radiusMobile : config.orbit.radiusDesktop) * (0.9 + orbitReveal * 0.24);
     const ellipseRatio = isMobile ? 0.66 : 0.58;
     const baseSpin = reduceMotion
-      ? scrollProgress * Math.PI * 0.58
-      : nowSeconds * 0.17 + scrollProgress * Math.PI * 0.55;
+      ? scrollProgress * Math.PI * 0.58 + touchSpinOffset
+      : nowSeconds * 0.17 + scrollProgress * Math.PI * 0.55 + touchSpinOffset;
     const nodeOpacity = clamp(orbitReveal * 1.2, 0, 1);
     const nodeScale = 0.9 + orbitReveal * 0.14;
 
-    if (orbitCore) {
-      const coreRotation = reduceMotion ? scrollProgress * 140 : nowSeconds * 12 + scrollProgress * 180;
-      const coreScale = 0.92 + orbitReveal * 0.14;
-      orbitCore.style.transform = `translate(-50%, -50%) scale(${coreScale.toFixed(3)}) rotate(${coreRotation.toFixed(
-        2
-      )}deg)`;
+    // Fly-in animation on first reveal
+    if (!nodesHaveEntered) {
+      nodesHaveEntered = true;
+      orbitNodes.forEach((node, index) => {
+        const startAngle = Math.random() * Math.PI * 2;
+        const startDist = Math.max(width, height) * 0.6;
+        const startX = Math.cos(startAngle) * startDist;
+        const startY = Math.sin(startAngle) * startDist;
+        node.style.transform = `translate(calc(-50% + ${startX}px), calc(-50% + ${startY}px)) scale(0.3)`;
+        node.style.opacity = "0";
+        node.style.transition = `transform ${0.6 + index * 0.08}s cubic-bezier(0.16, 1, 0.3, 1), opacity ${0.4 + index * 0.06}s ease`;
+      });
+      requestAnimationFrame(() => {
+        orbitNodes.forEach(node => {
+          node.style.transition = "transform 0.12s ease-out, opacity 0.2s ease, border-color 0.22s ease, background-color 0.22s ease, max-height 0.28s ease, padding 0.22s ease";
+        });
+      });
     }
 
     orbitNodes.forEach((node, index) => {
@@ -496,12 +972,19 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       const x = Math.cos(angle) * radius + mouseX * 14;
       const y = Math.sin(angle) * radius * ellipseRatio + mouseY * 10 + drift * 0.25;
       const depthMix = (Math.sin(angle) + 1) * 0.5;
-      const nodeDepthScale = nodeScale * (0.92 + depthMix * 0.14);
 
-      node.style.opacity = `${nodeOpacity * (0.7 + depthMix * 0.3)}`;
-      node.style.transform = `translate(calc(-50% + ${x.toFixed(2)}px), calc(-50% + ${y.toFixed(
-        2
-      )}px)) scale(${nodeDepthScale.toFixed(3)})`;
+      // Stronger depth sorting
+      const depthScale = nodeScale * (0.78 + depthMix * 0.28);
+      const depthOpacity = nodeOpacity * (0.45 + depthMix * 0.55);
+
+      node.style.zIndex = `${Math.round(depthMix * 10)}`;
+      node.style.opacity = `${depthOpacity}`;
+      node.style.transform = `translate(calc(-50% + ${x.toFixed(2)}px), calc(-50% + ${y.toFixed(2)}px)) scale(${depthScale.toFixed(3)})`;
+
+      // Accent glow
+      const { accent } = nodeAccents[index];
+      node.style.borderColor = `${accent}44`;
+      node.style.boxShadow = `0 0 ${(12 + depthMix * 8).toFixed(0)}px ${accent}33, inset 0 0 6px ${accent}11`;
     });
   };
 
@@ -585,7 +1068,10 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       orbitSpeedReset ? 0 : boostedStageSpeed,
       orbitDampen
     );
-    drawOrbitRings(orbitReveal);
+    drawOrbitRings(nowSeconds, orbitReveal, delta);
+    drawSpokes(nowSeconds, orbitReveal);
+    if (orbitReveal > 0.02 && !reduceMotion) updateCloudTexture(nowSeconds);
+    drawPlanet(nowSeconds, orbitReveal);
     updateOrbitMenu(nowSeconds, orbitReveal);
     setSlides(slideProgress);
 
@@ -604,6 +1090,49 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     targetMouseX = 0;
     targetMouseY = 0;
   };
+
+  // Touch swipe-to-spin handlers
+  const touchStart = (e: TouchEvent) => {
+    if (scrollProgress < config.orbit.start) return;
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    isTouchDragging = false;
+  };
+
+  const touchMove = (e: TouchEvent) => {
+    if (scrollProgress < config.orbit.start) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+
+    if (!isTouchDragging && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      isTouchDragging = true;
+    }
+
+    if (isTouchDragging) {
+      e.preventDefault();
+      const spinDelta = dx * 0.004;
+      touchSpinOffset += spinDelta;
+      touchSpinVelocity = spinDelta;
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+    }
+  };
+
+  const touchEnd = () => { isTouchDragging = false; };
+
+  // Tap-to-expand on touch devices
+  if ("ontouchstart" in window) {
+    orbitNodes.forEach(node => {
+      node.addEventListener("click", (e) => {
+        if (node.classList.contains("is-expanded")) return;
+        e.preventDefault();
+        orbitNodes.forEach(n => n.classList.remove("is-expanded"));
+        node.classList.add("is-expanded");
+      });
+    });
+  }
 
   const scrollToOrbit = () => {
     const maxScrollable = Math.max(wrapper.offsetHeight - window.innerHeight, 0);
@@ -641,6 +1170,11 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   if (skipIntroButton) {
     skipIntroButton.addEventListener("click", scrollToOrbit);
   }
+  if (orbitMenu) {
+    orbitMenu.addEventListener("touchstart", touchStart, { passive: true });
+    orbitMenu.addEventListener("touchmove", touchMove, { passive: false });
+    orbitMenu.addEventListener("touchend", touchEnd, { passive: true });
+  }
 
   return () => {
     window.removeEventListener("resize", resize);
@@ -648,6 +1182,11 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     wrapper.removeEventListener("pointerleave", pointerLeave);
     if (skipIntroButton) {
       skipIntroButton.removeEventListener("click", scrollToOrbit);
+    }
+    if (orbitMenu) {
+      orbitMenu.removeEventListener("touchstart", touchStart);
+      orbitMenu.removeEventListener("touchmove", touchMove);
+      orbitMenu.removeEventListener("touchend", touchEnd);
     }
     trigger.kill();
     if (frameId) {
