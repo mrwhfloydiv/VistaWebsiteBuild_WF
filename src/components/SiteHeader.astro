@@ -35,10 +35,10 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
             <li>
               <a
                 href={withBase(item.href)}
-                class={`rounded-full px-3 py-2 transition-colors ${
+                class={`header-nav-link ${
                   currentNormalized === normalizePath(item.href)
-                    ? "bg-white/15 text-white"
-                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                    ? "header-nav-link--active"
+                    : ""
                 }`}
               >
                 {item.label}

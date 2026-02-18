@@ -514,10 +514,15 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
 
   const updateSlideTrackLayout = () => {
     if (!slideTrack || !headline) return;
-    const rect = headline.getBoundingClientRect();
-    slideTrack.style.left = `${rect.left}px`;
-    slideTrack.style.top = `${rect.top}px`;
-    slideTrack.style.width = `${rect.width}px`;
+    // Vertical: match headline top so titles swap in place
+    // Horizontal: match heroIntro container so slide titles share the
+    // same left edge and width as the main headline's parent
+    const headlineRect = headline.getBoundingClientRect();
+    const introEl = document.getElementById("heroIntro");
+    const containerRect = introEl ? introEl.getBoundingClientRect() : headlineRect;
+    slideTrack.style.left = `${containerRect.left}px`;
+    slideTrack.style.top = `${headlineRect.top}px`;
+    slideTrack.style.width = `${containerRect.width}px`;
   };
 
   const applySequenceHeight = () => {
@@ -1036,7 +1041,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     wrapper.classList.toggle("is-orbit-phase", orbitPhase);
 
     const introOpacity = clamp(
-      1 - smoothstep(config.orbit.start - 0.05, config.orbit.start + 0.08, scrollProgress),
+      1 - smoothstep(config.orbit.start - 0.12, config.orbit.start - 0.02, scrollProgress),
       0,
       1
     );
@@ -1052,7 +1057,13 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     }
 
     if (slideTrack) {
-      const trackOpacity = smoothstep(0.04, 0.12, slideProgress) * introOpacity;
+      // Slide track fades in with slideProgress, but fades out earlier
+      // than introPanel so it's gone before orbit menu appears
+      const trackFadeOut = clamp(
+        1 - smoothstep(config.orbit.start - 0.12, config.orbit.start - 0.02, scrollProgress),
+        0, 1
+      );
+      const trackOpacity = smoothstep(0.04, 0.12, slideProgress) * trackFadeOut;
       slideTrack.style.opacity = `${trackOpacity}`;
       slideTrack.style.pointerEvents = trackOpacity > 0.2 ? "auto" : "none";
     }
