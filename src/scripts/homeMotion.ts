@@ -794,71 +794,62 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     const exitTx = LINE_DX * dist.exit;    // negative X (leftward)
     const exitTy = LINE_DY * dist.exit;    // negative Y (slightly up)
 
+    // Unified easing for all slides
+    const ease = (x: number) => x * x * (3 - 2 * x); // smoothstep
+
     slides.forEach((slide, index) => {
       const isHero = index === 0;
+      const isLastSlide = index === slides.length - 1;
 
       if (index === activeIndex) {
         slide.classList.add("is-active");
 
-        const flyInEnd = 0.15;
-        const holdEnd = 0.75;
+        const flyInEnd = 0.18;
+        const holdEnd = 0.72;
         let opacity: number;
         let tx: number;
         let ty: number;
         let scale: number;
 
         if (isHero) {
-          // ── SLIDE 0: Hard visible on load. Only flies OUT along 290° line. ──
+          // ── SLIDE 0: Visible on load, flies OUT along 290° line ──
           if (t < holdEnd) {
             opacity = 1;
             tx = 0;
             ty = 0;
             scale = 1;
           } else {
-            // Fly out along the SAME 290° line — identical to slides 1-3
             const ft = (t - holdEnd) / (1.0 - holdEnd);
-            const eased = ft * ft * (3 - 2 * ft);
-            opacity = clamp(1 - ft * 2.5, 0, 1);
+            const eased = ease(ft);
+            opacity = clamp(1 - ft * 2.2, 0, 1);
             tx = exitTx * eased;
             ty = exitTy * eased;
-            scale = lerp(1.0, 3.5, eased);
+            scale = lerp(1.0, 2.8, eased);
           }
+        } else if (t < flyInEnd) {
+          // ── FLY-IN: from vanishing point → reading position ──
+          const at = t / flyInEnd;
+          const eased = ease(at);
+          opacity = clamp(eased * 1.3, 0, 1);
+          scale = lerp(0.3, 1.0, eased);
+          tx = lerp(entryTx, 0, eased);
+          ty = lerp(entryTy, 0, eased);
+        } else if (t < holdEnd || isLastSlide) {
+          // ── HOLD: fully readable at reading position ──
+          opacity = 1;
+          tx = 0;
+          ty = 0;
+          scale = 1;
         } else {
-          // ── SLIDES 1-3: Fly in along line → hold → fly out along SAME line ──
-          const isLastSlide = index === slides.length - 1;
-
-          if (t < flyInEnd) {
-            // FLY-IN: starts at vanishing point (behind on the line), tiny
-            // Travels along 290° line toward reading position
-            const at = t / flyInEnd;
-            const eased = at * (2 - at); // ease-out: fast approach, soft landing
-            opacity = clamp(eased * 1.4, 0, 1);
-            scale = lerp(0.25, 1.0, eased);
-            // Interpolate from entry offset → reading pos (0,0)
-            tx = lerp(entryTx, 0, eased);
-            ty = lerp(entryTy, 0, eased);
-          } else if (t < holdEnd || isLastSlide) {
-            // HOLD: at reading position, fully readable.
-            // The LAST slide stays in hold permanently — introOpacity
-            // fades the entire panel so no separate fly-out is needed.
-            opacity = 1;
-            tx = 0;
-            ty = 0;
-            scale = 1;
-          } else {
-            // FLY-OUT: continues SAME direction past reading pos
-            const ft = (t - holdEnd) / (1.0 - holdEnd);
-            const eased = ft * ft * (3 - 2 * ft);
-            opacity = clamp(1 - ft * 2.5, 0, 1);
-            tx = exitTx * eased;
-            ty = exitTy * eased;
-            scale = lerp(1.0, 3.5, eased);
-          }
+          // ── FLY-OUT: continues along same line past camera ──
+          const ft = (t - holdEnd) / (1.0 - holdEnd);
+          const eased = ease(ft);
+          opacity = clamp(1 - ft * 2.2, 0, 1);
+          tx = exitTx * eased;
+          ty = exitTy * eased;
+          scale = lerp(1.0, 2.8, eased);
         }
 
-        // With transform-origin: left center, scale > 1 expands rightward,
-        // fighting the leftward exit motion. Compensate only during fly-OUT
-        // (scale > 1) so the visual center stays on the 290° line.
         const scaleExcess = Math.max(0, scale - 1);
         const scaleCompX = -scaleExcess * width * 0.18;
         const scaleCompY = -scaleExcess * 8;
@@ -868,11 +859,9 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
         slide.classList.remove("is-active");
         slide.style.opacity = "0";
         if (index < activeIndex) {
-          // Already flown past — parked at exit end of line
-          slide.style.transform = `translate(${exitTx.toFixed(1)}px, ${exitTy.toFixed(1)}px) scale(3.5)`;
+          slide.style.transform = `translate(${exitTx.toFixed(1)}px, ${exitTy.toFixed(1)}px) scale(2.8)`;
         } else {
-          // Not yet visible — parked at entry end of line (vanishing pt)
-          slide.style.transform = `translate(${entryTx.toFixed(1)}px, ${entryTy.toFixed(1)}px) scale(0.25)`;
+          slide.style.transform = `translate(${entryTx.toFixed(1)}px, ${entryTy.toFixed(1)}px) scale(0.3)`;
         }
       }
     });
