@@ -1849,8 +1849,13 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       heroScrollCue.style.opacity = `${introOpacity}`;
     }
 
-    // Scroll exit fade — orbit glow + haze fade as sticky unpins
-    const canvasOrbitFade = 1 - smoothstep(0.92, 0.98, scrollProgress);
+    // Scroll exit fade — glow fades exactly as hex globe leaves viewport
+    // When globe center is in the viewport → full glow; as it scrolls off the top → glow fades to 0
+    const coreEl = orbitCore?.getBoundingClientRect();
+    const globeCenterY = coreEl ? (coreEl.top + coreEl.height * 0.5) : height * 0.5;
+    // Fade: glow is full when globe center is below 15% of viewport height,
+    // gone when globe center reaches top edge (0) or above
+    const canvasOrbitFade = coreEl ? clamp(globeCenterY / (height * 0.15), 0, 1) : (1 - smoothstep(0.92, 0.98, scrollProgress));
 
     drawAtmosphere(stageThemes[stageLower], stageThemes[stageUpper], stageMix, canvasOrbitFade);
     const orbitDampen = 1 - smoothstep(config.orbit.start - 0.02, config.orbit.start + 0.04, scrollProgress);
