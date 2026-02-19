@@ -812,7 +812,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
         let scale: number;
 
         if (isHero) {
-          // ── SLIDE 0: Visible on load, flies OUT along 290° line ──
+          // ── SLIDE 0: Visible on load, flies OUT along 290° line (same path as others) ──
           if (t < holdEnd) {
             opacity = 1;
             tx = 0;
@@ -824,7 +824,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
             opacity = clamp(1 - ft * 2.2, 0, 1);
             tx = exitTx * eased;
             ty = exitTy * eased;
-            scale = lerp(1.0, 2.8, eased);
+            scale = 1; // no scale change — just slides along the line like the others
           }
         } else if (t < flyInEnd) {
           // ── FLY-IN: from vanishing point → reading position ──
