@@ -164,32 +164,50 @@ a {
   transform: translateY(-6px) rotate(-45deg);
 }
 
-/* ── Mobile drawer — fixed fullscreen overlay ── */
+/* ── Mobile drawer — half-screen glass overlay with cascade ── */
 .mobile-drawer {
   display: none;
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100dvh;
+  height: 54vh;
   z-index: 10000;
-  background: rgb(5, 8, 11);
-  opacity: 0;
+  background: rgba(5, 8, 11, 0.92);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
   pointer-events: none;
-  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Slide down from above + fade */
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .mobile-drawer.is-open {
+  transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Closing animation — slightly faster, ease-in feel */
+.mobile-drawer.is-closing {
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.5, 0, 0.75, 0),
+              opacity 0.3s cubic-bezier(0.5, 0, 0.75, 0);
+  pointer-events: none;
 }
 
 .mobile-drawer__nav {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
   height: 100%;
-  padding: 4rem 0 2rem;
+  padding: 3.5rem 0 1.5rem;
+  gap: 0;
 }
 
 .mobile-drawer__link {
@@ -198,30 +216,55 @@ a {
   align-items: center;
   justify-content: flex-end;
   gap: 1rem;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   text-decoration: none;
   color: rgba(250, 250, 250, 0.5);
   overflow: hidden;
   cursor: pointer;
-  transition: color 0.3s ease, background-color 0.3s ease;
-  /* Entrance animation: start offset, animate in */
+  /* Cascade entrance — start hidden, rotated, scaled, clipped */
   opacity: 0;
-  transform: translateX(30px);
+  transform: translateY(28px) translateX(40px) rotate(2deg);
+  clip-path: inset(0 0 100% 0);
+  transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+/* Accent sweep line — slides in from right */
+.mobile-drawer__link::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--link-accent);
+  transform: translateX(101%);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.4s ease;
 }
 
 .mobile-drawer.is-open .mobile-drawer__link {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateY(0) translateX(0) rotate(0deg);
+  clip-path: inset(0 0 0 0);
   transition: color 0.3s ease, background-color 0.3s ease,
-              opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+              opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              clip-path 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Accent line sweeps in after link lands */
+.mobile-drawer.is-open .mobile-drawer__link::after {
+  transform: translateX(0);
+  opacity: 0.4;
+  transition-delay: calc(var(--link-index) * 0.08s + 0.25s);
 }
 
 .mobile-drawer__link.is-entering {
   /* Stagger delay set via JS style attribute */
 }
 
-/* Number index — small mono on the left */
+/* Number index — small mono */
 .mobile-drawer__link-num {
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.65rem;
@@ -234,13 +277,15 @@ a {
 /* Main link text — bold, right-aligned */
 .mobile-drawer__link-text {
   font-family: "Space Grotesk", sans-serif;
-  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  font-size: clamp(1.5rem, 5.5vw, 2rem);
   font-weight: 700;
   letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 1.1;
   text-align: right;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.3s ease,
+              letter-spacing 0.3s ease;
 }
 
 /* ── Hover / Touch active state — color fills the row ── */
@@ -254,7 +299,8 @@ a {
 .mobile-drawer__link:hover .mobile-drawer__link-text,
 .mobile-drawer__link:active .mobile-drawer__link-text,
 .mobile-drawer__link:focus-visible .mobile-drawer__link-text {
-  transform: translateX(-6px);
+  transform: translateX(-8px);
+  letter-spacing: 0.04em;
   color: #fff;
 }
 
@@ -264,16 +310,22 @@ a {
   color: rgba(250, 250, 250, 0.6);
 }
 
-/* Active page indicator — subtle accent underline */
+.mobile-drawer__link:hover::after,
+.mobile-drawer__link:active::after,
+.mobile-drawer__link:focus-visible::after {
+  opacity: 0.9;
+  height: 100%;
+  transition: opacity 0.2s ease, height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Active page indicator — accent left border */
 .mobile-drawer__link--active {
   color: rgba(250, 250, 250, 0.85);
+  border-left: 3px solid var(--link-accent);
 }
 
 .mobile-drawer__link--active .mobile-drawer__link-text {
-  text-decoration: underline;
-  text-decoration-color: var(--link-accent);
-  text-underline-offset: 4px;
-  text-decoration-thickness: 2px;
+  color: rgba(250, 250, 250, 0.95);
 }
 
 /* Desktop: show nav, hide hamburger + drawer */

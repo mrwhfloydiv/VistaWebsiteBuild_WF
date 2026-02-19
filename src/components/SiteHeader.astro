@@ -106,34 +106,62 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
   if (menuBtn && drawer) {
     const links = Array.from(drawer.querySelectorAll<HTMLAnchorElement>(".mobile-drawer__link"));
 
+    let closeTimeout: ReturnType<typeof setTimeout> | null = null;
+
     const toggleDrawer = (open?: boolean) => {
       const shouldOpen = open ?? !drawer.classList.contains("is-open");
-      drawer.classList.toggle("is-open", shouldOpen);
+
+      // Clear any pending close animation timeout
+      if (closeTimeout) { clearTimeout(closeTimeout); closeTimeout = null; }
+
       menuBtn.classList.toggle("is-open", shouldOpen);
       menuBtn.setAttribute("aria-expanded", String(shouldOpen));
       drawer.setAttribute("aria-hidden", String(!shouldOpen));
 
-      // Lock body scroll when fullscreen drawer is open
-      document.body.style.overflow = shouldOpen ? "hidden" : "";
-
-      // Staggered entrance animation
       if (shouldOpen) {
+        // ── OPEN: remove closing class, add is-open, cascade links ──
+        drawer.classList.remove("is-closing");
+        drawer.classList.add("is-open");
+
+        // Staggered cascade — each link slides in 80ms after the previous
         links.forEach((link, i) => {
-          link.style.transitionDelay = `${0.04 * i}s`;
+          link.style.transitionDelay = `${0.08 * i}s`;
           link.classList.add("is-entering");
         });
-        // Remove the class after animation completes so hover transitions work normally
+
+        // After cascade completes, clear delays so hover transitions are instant
         setTimeout(() => {
           links.forEach(link => {
             link.style.transitionDelay = "0s";
             link.classList.remove("is-entering");
           });
-        }, 400);
+        }, 80 * links.length + 400);
+
       } else {
-        links.forEach(link => {
-          link.style.transitionDelay = "0s";
-          link.classList.remove("is-entering");
+        // ── CLOSE: reverse cascade then slide drawer up ──
+        // Stagger links out in reverse order
+        const totalLinks = links.length;
+        links.forEach((link, i) => {
+          const reverseI = totalLinks - 1 - i;
+          link.style.transitionDelay = `${0.04 * reverseI}s`;
         });
+
+        // Remove is-open so links animate back to hidden state
+        drawer.classList.remove("is-open");
+
+        // After links have cascaded out, slide the drawer panel up
+        const linkCascadeTime = 0.04 * totalLinks * 1000 + 200;
+        closeTimeout = setTimeout(() => {
+          drawer.classList.add("is-closing");
+          // After drawer slides up, clean everything
+          setTimeout(() => {
+            drawer.classList.remove("is-closing");
+            links.forEach(link => {
+              link.style.transitionDelay = "0s";
+              link.classList.remove("is-entering");
+            });
+          }, 450);
+        }, linkCascadeTime);
       }
     };
 
