@@ -1045,10 +1045,11 @@ body.menu-open .hero-wave-canvas {
     white-space: normal;
   }
 
-  /* Buttons stack full-width on phone for clean alignment */
+  /* Buttons stack on phone — right edge aligns with kicker chips */
   .hero-stack .flex.flex-wrap {
     flex-direction: column;
     gap: 0.55rem;
+    max-width: 84%;
   }
 
   .hero-stack .flex.flex-wrap .btn-primary,
