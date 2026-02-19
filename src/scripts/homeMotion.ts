@@ -280,6 +280,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   const mobilePopupLabel = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__label") ?? null;
   const mobilePopupDesc = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__desc") ?? null;
   const mobilePopupCard = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__card") ?? null;
+  const lightspeedSection = document.getElementById("lightspeedCta");
 
   if (!canvas || !slides.length) return () => {};
 
@@ -1467,12 +1468,14 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     orbitDampen: number,
     orbitFade = 1,
     globeCx = width * 0.5,
-    globeCy = height * 0.52
+    globeCy = height * 0.52,
+    lightspeedWarp = 0
   ) => {
     const centerX = width * 0.5;
     const centerY = height * 0.5;
     const focal = Math.max(width, height) * 0.94;
 
+    // lightspeedWarp bypasses orbitDampen — it kicks in after the orbit section
     const dynamicSpeed =
       (scrollEnergy * 0.22 +
         pointerEnergy * 0.08 +
@@ -1480,7 +1483,11 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
         stageSpeedNormalized * speedStageMaxBoost +
         warpStrength * config.stars.warpBoost) *
       orbitDampen;
-    const speed = config.stars.baseSpeed + dynamicSpeed;
+    const lsWarpSpeed = lightspeedWarp * 38; // extreme speed for lightspeed jump
+    const speed = config.stars.baseSpeed + dynamicSpeed + lsWarpSpeed;
+
+    // Combined warp for streak rendering (either intro warp or lightspeed warp)
+    const totalWarp = Math.max(warpStrength, lightspeedWarp);
 
     for (const star of stars) {
       star.z -= speed * delta * (8 + star.size * 4);
@@ -1507,17 +1514,35 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
         subtleCool,
         (1 - depthMix) * 0.14
       );
-      const alpha = clamp(0.12 + depthMix * 0.86 + warpStrength * 0.08, 0, 1);
+      const alpha = clamp(0.12 + depthMix * 0.86 + totalWarp * 0.08, 0, 1);
       const radius = clamp(star.size * (0.45 + depthMix * 1.9), 0.35, 3.2);
 
-      if (warpStrength > 0.07 && star.initialized && !reduceMotion) {
-        const streakAlpha = alpha * clamp(warpStrength * 1.05, 0, 0.92);
-        context.strokeStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${streakAlpha})`;
-        context.lineWidth = clamp(radius * 0.72, 0.35, 1.8);
-        context.beginPath();
-        context.moveTo(star.prevX, star.prevY);
-        context.lineTo(sx, sy);
-        context.stroke();
+      // Warp streaks — from either intro warp or lightspeed warp
+      if (totalWarp > 0.07 && star.initialized && !reduceMotion) {
+        // Lightspeed streaks radiate from center (directional), intro streaks use prev pos
+        if (lightspeedWarp > 0.07) {
+          const dx = sx - centerX;
+          const dy = sy - centerY;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const sLen = 5 + lightspeedWarp * (55 + depthMix * 85);
+          const streakAlpha = alpha * clamp(lightspeedWarp * 1.1, 0, 0.95);
+          context.strokeStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${streakAlpha})`;
+          context.lineWidth = clamp(radius * 0.7, 0.3, 2.0);
+          context.beginPath();
+          context.moveTo(sx, sy);
+          context.lineTo(sx - nx * sLen, sy - ny * sLen);
+          context.stroke();
+        } else {
+          const streakAlpha = alpha * clamp(warpStrength * 1.05, 0, 0.92);
+          context.strokeStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${streakAlpha})`;
+          context.lineWidth = clamp(radius * 0.72, 0.35, 1.8);
+          context.beginPath();
+          context.moveTo(star.prevX, star.prevY);
+          context.lineTo(sx, sy);
+          context.stroke();
+        }
       }
 
       // Draw V logo stamp or regular circle
@@ -1542,13 +1567,17 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       star.initialized = true;
     }
 
-    const vignette = context.createLinearGradient(0, 0, 0, height);
-    vignette.addColorStop(0, "rgba(0, 0, 0, 0.9)");
-    vignette.addColorStop(0.24, "rgba(0, 0, 0, 0.06)");
-    vignette.addColorStop(0.78, "rgba(0, 0, 0, 0.08)");
-    vignette.addColorStop(1, "rgba(0, 0, 0, 0.94)");
-    context.fillStyle = vignette;
-    context.fillRect(0, 0, width, height);
+    // Vignette (suppress during lightspeed so flash is clean)
+    if (lightspeedWarp < 0.6) {
+      const vignetteAlpha = 1 - smoothstep(0.3, 0.6, lightspeedWarp);
+      const vignette = context.createLinearGradient(0, 0, 0, height);
+      vignette.addColorStop(0, `rgba(0, 0, 0, ${0.9 * vignetteAlpha})`);
+      vignette.addColorStop(0.24, `rgba(0, 0, 0, ${0.06 * vignetteAlpha})`);
+      vignette.addColorStop(0.78, `rgba(0, 0, 0, ${0.08 * vignetteAlpha})`);
+      vignette.addColorStop(1, `rgba(0, 0, 0, ${0.94 * vignetteAlpha})`);
+      context.fillStyle = vignette;
+      context.fillRect(0, 0, width, height);
+    }
 
     if (orbitReveal > 0.06 && orbitFade > 0) {
       const haloAlpha = (0.04 + orbitReveal * 0.12) * orbitFade;
@@ -1564,6 +1593,29 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       halo.addColorStop(1, "rgba(0, 0, 0, 0)");
       context.fillStyle = halo;
       context.fillRect(0, 0, width, height);
+    }
+
+    // Lightspeed white flash — radial burst from center, then full white
+    if (lightspeedWarp > 0.4) {
+      const flashBuild = smoothstep(0.4, 0.85, lightspeedWarp);
+      const fullWhite = smoothstep(0.8, 1.0, lightspeedWarp);
+
+      // Central radial burst first
+      if (flashBuild > 0 && fullWhite < 1) {
+        const burstR = Math.max(width, height) * (0.2 + flashBuild * 0.8);
+        const burst = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, burstR);
+        burst.addColorStop(0, `rgba(255, 255, 255, ${flashBuild * 0.6})`);
+        burst.addColorStop(0.4, `rgba(255, 255, 255, ${flashBuild * 0.3})`);
+        burst.addColorStop(1, "rgba(255, 255, 255, 0)");
+        context.fillStyle = burst;
+        context.fillRect(0, 0, width, height);
+      }
+
+      // Full white wash
+      if (fullWhite > 0) {
+        context.fillStyle = `rgba(255, 255, 255, ${fullWhite})`;
+        context.fillRect(0, 0, width, height);
+      }
     }
   };
 
@@ -1862,6 +1914,21 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
 
     drawAtmosphere(stageThemes[stageLower], stageThemes[stageUpper], stageMix, canvasOrbitFade);
     const orbitDampen = 1 - smoothstep(config.orbit.start - 0.02, config.orbit.start + 0.04, scrollProgress);
+
+    // ── Lightspeed CTA warp ──
+    // Detect when #lightspeedCta approaches and ramp up stars
+    let lightspeedWarp = 0;
+    if (lightspeedSection) {
+      const lsRect = lightspeedSection.getBoundingClientRect();
+      const lsScrollRange = lightspeedSection.offsetHeight - height;
+      if (lsScrollRange > 0) {
+        const lsScrolled = -lsRect.top;
+        const lsProgress = clamp(lsScrolled / lsScrollRange, 0, 1);
+        // Warp: ramp up 0.05→0.60 scroll through section, peak at 0.6
+        lightspeedWarp = smoothstep(0.03, 0.55, lsProgress);
+      }
+    }
+
     drawStarField(
       delta,
       stageThemes[stageUpper].palette,
@@ -1872,8 +1939,23 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       orbitDampen,
       canvasOrbitFade,
       globeCenterX,
-      globeCenterY
+      globeCenterY,
+      lightspeedWarp
     );
+
+    // Once lightspeed flash hits full white, hide the canvas so white CTA/footer shows
+    const lsFullWhite = lightspeedWarp > 0.97;
+    canvas.style.opacity = lsFullWhite ? "0" : "1";
+    if (lightspeedSection) {
+      // Switch section bg from transparent → white in sync with canvas hide
+      lightspeedSection.style.background = lsFullWhite ? "#ffffff" : "transparent";
+      // Control CTA content visibility — hidden until flash completes
+      const lsContent = lightspeedSection.querySelector<HTMLElement>('.lightspeed-cta__content');
+      if (lsContent) {
+        const contentFade = lsFullWhite ? 1 : 0;
+        lsContent.style.opacity = `${contentFade}`;
+      }
+    }
 
     // Planet glow on main canvas (fades with scroll exit)
     drawPlanetGlow(orbitReveal, nowSeconds, canvasOrbitFade);
