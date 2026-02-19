@@ -113,6 +113,9 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
       menuBtn.setAttribute("aria-expanded", String(shouldOpen));
       drawer.setAttribute("aria-hidden", String(!shouldOpen));
 
+      // Lock body scroll when fullscreen drawer is open
+      document.body.style.overflow = shouldOpen ? "hidden" : "";
+
       // Staggered entrance animation
       if (shouldOpen) {
         links.forEach((link, i) => {
@@ -148,13 +151,6 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
       }
     });
 
-    // Close when scrolling past a threshold
-    let lastScrollY = window.scrollY;
-    window.addEventListener("scroll", () => {
-      if (drawer.classList.contains("is-open") && Math.abs(window.scrollY - lastScrollY) > 100) {
-        toggleDrawer(false);
-      }
-      lastScrollY = window.scrollY;
-    }, { passive: true });
+    // No scroll-close needed — drawer is a fixed fullscreen overlay
   }
 </script>
