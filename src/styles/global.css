@@ -866,37 +866,71 @@ a {
     gap: 0.6rem;
   }
 
-  /* Hero breathing room on mobile — account for sticky header (h-14 = 3.5rem) */
+  /* Hero breathing room on mobile — clear header, tight but breathable */
   .hero-overlay-grid {
-    padding-top: clamp(4.5rem, 14vh, 7rem);
-    padding-bottom: 6rem;
+    padding-top: clamp(3.2rem, 7vh, 4.5rem);
+    padding-bottom: 1.5rem;
     align-items: flex-start;
   }
 
   .hero-stack {
-    gap: clamp(0.8rem, 2.5vh, 1.6rem);
+    gap: clamp(0.6rem, 1.6vh, 1rem);
   }
 
   .hero-title {
     font-size: clamp(1.65rem, 7.5vw, 2.8rem);
-    line-height: 1.05;
+    line-height: 1.08;
   }
 
   .hero-slide {
-    padding: 0.5rem 0;
+    padding: 0.25rem 0;
   }
 
   .hero-slide-frame {
-    min-height: calc(clamp(1.65rem, 7.5vw, 2.8rem) * 2.1 + 0.5em);
+    min-height: calc(clamp(1.65rem, 7.5vw, 2.8rem) * 2.1 + 0.3em);
   }
 
   .hero-slide h2 {
     font-size: clamp(1.65rem, 7.5vw, 2.8rem);
-    line-height: 1.05;
+    line-height: 1.08;
+    white-space: normal;
   }
 
-  .hero-slide h2 {
-    white-space: normal;
+  /* Buttons stack full-width on phone for clean alignment */
+  .hero-stack .flex.flex-wrap {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .hero-stack .flex.flex-wrap .btn-primary,
+  .hero-stack .flex.flex-wrap .btn-secondary {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 0.7rem 1rem;
+  }
+
+  /* Chip sizing on phone */
+  .chip--ghost {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  /* Kicker badges: tight row, all three should fit on one line */
+  .hero-kicker-list {
+    gap: 0.2rem;
+  }
+
+  .hero-kicker-list span {
+    font-size: 0.52rem;
+    padding: 0.15rem 0.4rem;
+    letter-spacing: 0.01em;
+  }
+
+  /* Description text slightly smaller for breathing room */
+  .hero-stack > p {
+    font-size: 0.9rem;
+    line-height: 1.45;
   }
 
   .orbit-menu {
@@ -985,7 +1019,7 @@ a {
   }
 
   .orbit-core {
-    width: clamp(70px, 20vw, 120px);
+    width: clamp(60px, 18vw, 100px);
   }
 
   .orbit-node {
@@ -1004,8 +1038,8 @@ a {
   }
 
   .orbit-node__name {
-    font-size: 0.72rem;
-    margin-top: 4px;
+    font-size: 0.62rem;
+    margin-top: 3px;
   }
 
   .orbit-node__popup {

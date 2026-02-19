@@ -92,9 +92,9 @@ const defaultConfig: MotionConfig = {
     radiusDesktop: 260,
     radiusMobile: 220,
     rings: [
-      { radiusFactor: 0.45, ellipseRatio: 0.52, ellipseRatioMobile: 0.55, speedMultiplier: 1.4, tiltOffset: 0, strokeAlpha: 0.10 },
-      { radiusFactor: 0.72, ellipseRatio: 0.58, ellipseRatioMobile: 0.62, speedMultiplier: 1.0, tiltOffset: 0.08, strokeAlpha: 0.14 },
-      { radiusFactor: 1.0, ellipseRatio: 0.64, ellipseRatioMobile: 0.68, speedMultiplier: 0.7, tiltOffset: -0.06, strokeAlpha: 0.18 },
+      { radiusFactor: 0.45, ellipseRatio: 0.52, ellipseRatioMobile: 0.50, speedMultiplier: 1.4, tiltOffset: 0, strokeAlpha: 0.10 },
+      { radiusFactor: 0.72, ellipseRatio: 0.58, ellipseRatioMobile: 0.56, speedMultiplier: 1.0, tiltOffset: 0.08, strokeAlpha: 0.14 },
+      { radiusFactor: 1.0, ellipseRatio: 0.64, ellipseRatioMobile: 0.62, speedMultiplier: 0.7, tiltOffset: -0.06, strokeAlpha: 0.18 },
     ]
   }
 };
@@ -691,7 +691,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   /** Orbit radius that adapts to viewport on mobile so nodes never overflow */
   const getOrbitRadius = (): number => {
     if (!isMobile) return config.orbit.radiusDesktop;
-    return Math.min(config.orbit.radiusMobile, Math.min(width, height) * 0.34);
+    // Use width (not min) to keep nodes within horizontal bounds
+    return Math.min(config.orbit.radiusMobile, width * 0.38);
   };
 
   /** Compute tilted 2D position for an orbit node (shared by spokes, pulses, nodes) */
