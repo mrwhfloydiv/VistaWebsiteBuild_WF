@@ -1464,7 +1464,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     warpStrength: number,
     sequenceBoost: number,
     stageSpeedNormalized: number,
-    orbitDampen: number
+    orbitDampen: number,
+    orbitFade = 1
   ) => {
     const centerX = width * 0.5;
     const centerY = height * 0.5;
@@ -1547,7 +1548,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     context.fillStyle = vignette;
     context.fillRect(0, 0, width, height);
 
-    if (orbitReveal > 0.06) {
+    if (orbitReveal > 0.06 && orbitFade > 0) {
+      const haloAlpha = (0.04 + orbitReveal * 0.12) * orbitFade;
       const halo = context.createRadialGradient(
         width * 0.5,
         height * 0.52,
@@ -1556,7 +1558,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
         height * 0.52,
         Math.max(width, height) * 0.45
       );
-      halo.addColorStop(0, `rgba(74, 124, 230, ${0.04 + orbitReveal * 0.12})`);
+      halo.addColorStop(0, `rgba(74, 124, 230, ${haloAlpha})`);
       halo.addColorStop(1, "rgba(0, 0, 0, 0)");
       context.fillStyle = halo;
       context.fillRect(0, 0, width, height);
@@ -1859,7 +1861,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       warpStrength + transitionBurst * 0.7,
       sequenceBoost,
       orbitSpeedReset ? 0 : boostedStageSpeed,
-      orbitDampen
+      orbitDampen,
+      canvasOrbitFade
     );
 
     // Planet glow on main canvas (fades with scroll exit)
@@ -2060,7 +2063,9 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       if (reduceMotion) {
         draw(performance.now());
       }
-    }
+    },
+    onLeave: () => { scrollProgress = 1; },
+    onEnterBack: () => { scrollProgress = 1; }
   });
 
   // Initialize SVG, ring assignments, hex globe, and planet canvas
