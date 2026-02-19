@@ -2042,6 +2042,14 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       scrollProgress = self.progress;
       scrollEnergy = clamp(scrollEnergy + clamp(Math.abs(self.getVelocity()) / 3000, 0, 1), 0, 2);
 
+      // Scroll = kill switch for mobile popup overlay + centering animation
+      if (mobilePopupOverlay?.classList.contains("is-visible") || targetSpinOffset !== null) {
+        orbitNodes.forEach(n => n.classList.remove("is-expanded"));
+        mobilePopupOverlay?.classList.remove("is-visible");
+        targetSpinOffset = null;
+        pendingExpandIndex = null;
+      }
+
       if (reduceMotion) {
         draw(performance.now());
       }
