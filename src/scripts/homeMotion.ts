@@ -81,7 +81,7 @@ const defaultConfig: MotionConfig = {
   },
   stars: {
     desktopCount: 860,
-    mobileCount: 500,
+    mobileCount: 300,
     depth: 1600,
     baseSpeed: 0.28,
     warpBoost: 5.1
@@ -515,7 +515,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     layer: number;     // 0 = inner vortex, 1 = mid swirl, 2 = outer drift
   };
 
-  const CORE_PARTICLE_COUNT = isMobile ? 180 : 400;
+  const CORE_PARTICLE_COUNT = isMobile ? 90 : 400;
   const coreParticles: CoreParticle[] = [];
 
   const initCoreParticle = (p: CoreParticle, respawn: boolean) => {
@@ -895,6 +895,14 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
 
   const drawAtmosphere = (themeA: StageTheme, themeB: StageTheme, mix: number) => {
     const base = lerpColor(themeA.base, themeB.base, mix);
+
+    if (isMobile) {
+      // Mobile: flat fill — skip gradient allocations for performance
+      context.fillStyle = `rgb(${base[0]}, ${base[1]}, ${base[2]})`;
+      context.fillRect(0, 0, width, height);
+      return;
+    }
+
     const hazeA = lerpColor(themeA.hazeA, themeB.hazeA, mix);
     const hazeB = lerpColor(themeA.hazeB, themeB.hazeB, mix);
 
@@ -1306,8 +1314,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       const col = hueColors[p.hue] || hueColors[0];
       const drawSize = p.size * (0.8 + (depth + 1) * 0.35);
 
-      // Glow halo — more particles get halos now
-      if (alpha > 0.08 && drawSize > 0.4) {
+      // Glow halo — skip on mobile for performance (gradient alloc is expensive)
+      if (!isMobile && alpha > 0.08 && drawSize > 0.4) {
         const glowR = drawSize * 4;
         const grd = planetCtx.createRadialGradient(px, py, 0, px, py, glowR);
         grd.addColorStop(0, `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${alpha * 0.5})`);
@@ -1344,10 +1352,10 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
 
       // ── Mouse proximity highlight ──
       // Dot product between cell center (world space) and mouse direction
+      // Mouse highlight — skip on mobile (no mouse, saves per-cell dot products)
       let mouseHighlight = 0;
-      if (globeMouseProximity > 0.05) {
+      if (!isMobile && globeMouseProximity > 0.05) {
         const dot = ncx * globeMouseNx + ncy * globeMouseNy + ncz * globeMouseNz;
-        // dot > 0.7 means cell faces toward mouse; fade smoothly
         mouseHighlight = clamp((dot - 0.4) / 0.5, 0, 1) * globeMouseProximity;
       }
 
@@ -1400,8 +1408,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
         planetCtx.fill();
       }
 
-      // Glowing vertex dots at each corner
-      if (avgDepth > -0.15) {
+      // Glowing vertex dots at each corner — skip entirely on mobile for performance
+      if (!isMobile && avgDepth > -0.15) {
         const dotAlpha = clamp(0.1 + (avgDepth + 1) * 0.35, 0.05, 0.75) * glowPulse * 1.2 * highlightAlphaBoost;
         const dotR = 0.5 + clamp((avgDepth + 1) * 0.55, 0, 1.0) + mh * 0.4;
 

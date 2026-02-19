@@ -866,40 +866,40 @@ a {
     gap: 0.6rem;
   }
 
-  /* Hero breathing room on mobile — clear header, tight but breathable */
+  /* Hero breathing room on mobile — enough vertical space to not feel cluttered */
   .hero-overlay-grid {
-    padding-top: clamp(3.2rem, 7vh, 4.5rem);
-    padding-bottom: 1.5rem;
+    padding-top: clamp(4rem, 10vh, 6rem);
+    padding-bottom: 2.5rem;
     align-items: flex-start;
   }
 
   .hero-stack {
-    gap: clamp(0.6rem, 1.6vh, 1rem);
+    gap: clamp(1rem, 2.5vh, 1.6rem);
   }
 
   .hero-title {
     font-size: clamp(1.65rem, 7.5vw, 2.8rem);
-    line-height: 1.08;
+    line-height: 1.1;
   }
 
   .hero-slide {
-    padding: 0.25rem 0;
+    padding: 0.3rem 0;
   }
 
   .hero-slide-frame {
-    min-height: calc(clamp(1.65rem, 7.5vw, 2.8rem) * 2.1 + 0.3em);
+    min-height: calc(clamp(1.65rem, 7.5vw, 2.8rem) * 2.2 + 0.5em);
   }
 
   .hero-slide h2 {
     font-size: clamp(1.65rem, 7.5vw, 2.8rem);
-    line-height: 1.08;
+    line-height: 1.1;
     white-space: normal;
   }
 
   /* Buttons stack full-width on phone for clean alignment */
   .hero-stack .flex.flex-wrap {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.55rem;
   }
 
   .hero-stack .flex.flex-wrap .btn-primary,
@@ -907,30 +907,29 @@ a {
     width: 100%;
     text-align: center;
     justify-content: center;
-    padding: 0.7rem 1rem;
+    padding: 0.75rem 1rem;
   }
 
   /* Chip sizing on phone */
   .chip--ghost {
-    font-size: 0.6rem;
-    padding: 0.2rem 0.4rem;
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
   }
 
-  /* Kicker badges: tight row, all three should fit on one line */
+  /* Kicker badges */
   .hero-kicker-list {
-    gap: 0.2rem;
+    gap: 0.25rem;
   }
 
   .hero-kicker-list span {
-    font-size: 0.52rem;
-    padding: 0.15rem 0.4rem;
-    letter-spacing: 0.01em;
+    font-size: 0.55rem;
+    padding: 0.18rem 0.45rem;
   }
 
-  /* Description text slightly smaller for breathing room */
+  /* Description text */
   .hero-stack > p {
-    font-size: 0.9rem;
-    line-height: 1.45;
+    font-size: 0.92rem;
+    line-height: 1.5;
   }
 
   .orbit-menu {
