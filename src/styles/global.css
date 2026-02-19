@@ -170,8 +170,8 @@ a {
   overflow: hidden;
   max-height: 0;
   background: #000;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.6);
+  border-bottom: 1px solid #000;
+  box-shadow: none;
   transition: max-height 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -291,7 +291,7 @@ a {
 .mobile-drawer__link:hover .mobile-drawer__link-num,
 .mobile-drawer__link:active .mobile-drawer__link-num,
 .mobile-drawer__link:focus-visible .mobile-drawer__link-num {
-  color: rgba(0, 0, 0, 0.4);
+  color: #b22c2e;
 }
 
 .mobile-drawer__link:hover::after,
