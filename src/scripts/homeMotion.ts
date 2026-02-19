@@ -2086,6 +2086,17 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   window.addEventListener("mousemove", mouseMoveHandler);
   window.addEventListener("mouseup", mouseUp);
 
+  // Global scroll listener — dismiss mobile popup on ANY scroll (including past the wrapper)
+  const dismissPopupOnScroll = () => {
+    if (mobilePopupOverlay?.classList.contains("is-visible") || targetSpinOffset !== null) {
+      orbitNodes.forEach(n => n.classList.remove("is-expanded"));
+      mobilePopupOverlay?.classList.remove("is-visible");
+      targetSpinOffset = null;
+      pendingExpandIndex = null;
+    }
+  };
+  window.addEventListener("scroll", dismissPopupOnScroll, { passive: true });
+
   // Hover-pause: freeze orbit when hovering any node (desktop only)
   const pauseOrbit = () => {
     if (orbitPaused) return;
@@ -2111,6 +2122,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     }
     window.removeEventListener("mousemove", mouseMoveHandler);
     window.removeEventListener("mouseup", mouseUp);
+    window.removeEventListener("scroll", dismissPopupOnScroll);
     if (orbitMenu) {
       orbitMenu.removeEventListener("mousedown", mouseDown);
       orbitMenu.removeEventListener("touchstart", touchStart);
