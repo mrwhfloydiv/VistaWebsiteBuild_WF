@@ -165,74 +165,107 @@ a {
   display: none;
   overflow: hidden;
   max-height: 0;
-  background: linear-gradient(180deg, rgba(8, 12, 18, 0.92) 0%, rgba(5, 8, 14, 0.96) 100%);
-  backdrop-filter: blur(20px);
+  background: rgba(5, 8, 11, 0.98);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid rgba(250, 250, 250, 0.06);
-  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
   opacity: 0;
 }
 
 .mobile-drawer.is-open {
   opacity: 1;
-  max-height: 420px; /* enough for 6 links + padding */
+  max-height: 600px;
 }
 
 .mobile-drawer__nav {
   display: flex;
   flex-direction: column;
-  padding: 0.35rem 0.75rem 0.6rem;
+  padding: 0.75rem 0 1rem;
 }
 
 .mobile-drawer__link {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.7rem 0.85rem;
-  font-family: "Space Grotesk", sans-serif;
-  font-size: 0.95rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: rgba(250, 250, 250, 0.7);
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 0.9rem 1.5rem;
   text-decoration: none;
-  border-radius: 10px;
-  border-bottom: 1px solid rgba(250, 250, 250, 0.04);
-  transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  color: rgba(250, 250, 250, 0.5);
+  overflow: hidden;
+  cursor: pointer;
+  transition: color 0.3s ease, background-color 0.3s ease;
+  /* Entrance animation: start offset, animate in */
+  opacity: 0;
+  transform: translateX(30px);
 }
 
-.mobile-drawer__link:last-child {
-  border-bottom: none;
+.mobile-drawer.is-open .mobile-drawer__link {
+  opacity: 1;
+  transform: translateX(0);
+  transition: color 0.3s ease, background-color 0.3s ease,
+              opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.mobile-drawer__link:hover,
-.mobile-drawer__link:focus-visible {
-  color: #fff;
-  background: rgba(250, 250, 250, 0.06);
-  transform: translateX(2px);
+.mobile-drawer__link.is-entering {
+  /* Stagger delay set via JS style attribute */
 }
 
-.mobile-drawer__link--active {
-  color: #fff;
-  background: rgba(178, 44, 46, 0.2);
-  border-left: 2px solid var(--vista-red);
-}
-
-.mobile-drawer__link--active:hover {
-  background: rgba(178, 44, 46, 0.3);
-}
-
-.mobile-drawer__link-text {
-  flex: 1;
-}
-
-.mobile-drawer__arrow {
-  opacity: 0.3;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+/* Number index — small mono on the left */
+.mobile-drawer__link-num {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: rgba(250, 250, 250, 0.2);
+  transition: color 0.3s ease;
   flex-shrink: 0;
 }
 
-.mobile-drawer__link:hover .mobile-drawer__arrow {
-  opacity: 0.7;
-  transform: translateX(3px);
+/* Main link text — bold, right-aligned */
+.mobile-drawer__link-text {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  text-align: right;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s ease;
+}
+
+/* ── Hover / Touch active state — color fills the row ── */
+.mobile-drawer__link:hover,
+.mobile-drawer__link:active,
+.mobile-drawer__link:focus-visible {
+  color: rgba(250, 250, 250, 0.95);
+  background-color: var(--link-accent);
+}
+
+.mobile-drawer__link:hover .mobile-drawer__link-text,
+.mobile-drawer__link:active .mobile-drawer__link-text,
+.mobile-drawer__link:focus-visible .mobile-drawer__link-text {
+  transform: translateX(-6px);
+  color: #fff;
+}
+
+.mobile-drawer__link:hover .mobile-drawer__link-num,
+.mobile-drawer__link:active .mobile-drawer__link-num,
+.mobile-drawer__link:focus-visible .mobile-drawer__link-num {
+  color: rgba(250, 250, 250, 0.6);
+}
+
+/* Active page indicator — subtle accent underline */
+.mobile-drawer__link--active {
+  color: rgba(250, 250, 250, 0.85);
+}
+
+.mobile-drawer__link--active .mobile-drawer__link-text {
+  text-decoration: underline;
+  text-decoration-color: var(--link-accent);
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
 }
 
 /* Desktop: show nav, hide hamburger + drawer */

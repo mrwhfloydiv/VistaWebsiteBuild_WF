@@ -1,11 +1,11 @@
 ---
 const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/teams", label: "Teams" },
-  { href: "/about", label: "About" },
-  { href: "/insights", label: "Insights" },
-  { href: "/case-studies", label: "Case Studies" },
-  { href: "/contact", label: "Contact" }
+  { href: "/", label: "Home", accent: "#b22c2e" },
+  { href: "/teams", label: "Teams", accent: "#ebaa1f" },
+  { href: "/about", label: "About", accent: "#b5d9ee" },
+  { href: "/insights", label: "Insights", accent: "#4a94ff" },
+  { href: "/case-studies", label: "Case Studies", accent: "#b22c2e" },
+  { href: "/contact", label: "Contact", accent: "#ebaa1f" }
 ];
 
 const currentPath = Astro.url.pathname;
@@ -65,11 +65,11 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
     </button>
   </div>
 
-  <!-- Mobile push-down drawer (inside header, slides open below header bar) -->
+  <!-- Mobile push-down menu — pushes content below it -->
   <div id="mobileDrawer" class="mobile-drawer" aria-hidden="true">
     <nav aria-label="Mobile navigation" class="mobile-drawer__nav">
       {
-        navItems.map((item) => (
+        navItems.map((item, i) => (
           <a
             href={withBase(item.href)}
             class={`mobile-drawer__link ${
@@ -77,11 +77,11 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
                 ? "mobile-drawer__link--active"
                 : ""
             }`}
+            data-accent={item.accent}
+            style={`--link-accent: ${item.accent}; --link-index: ${i};`}
           >
+            <span class="mobile-drawer__link-num">{String(i + 1).padStart(2, "0")}</span>
             <span class="mobile-drawer__link-text">{item.label}</span>
-            <svg class="mobile-drawer__arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
           </a>
         ))
       }
@@ -104,18 +104,40 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
   const menuBtn = document.getElementById("mobileMenuBtn");
   const drawer = document.getElementById("mobileDrawer");
   if (menuBtn && drawer) {
+    const links = Array.from(drawer.querySelectorAll<HTMLAnchorElement>(".mobile-drawer__link"));
+
     const toggleDrawer = (open?: boolean) => {
       const shouldOpen = open ?? !drawer.classList.contains("is-open");
       drawer.classList.toggle("is-open", shouldOpen);
       menuBtn.classList.toggle("is-open", shouldOpen);
       menuBtn.setAttribute("aria-expanded", String(shouldOpen));
       drawer.setAttribute("aria-hidden", String(!shouldOpen));
+
+      // Staggered entrance animation
+      if (shouldOpen) {
+        links.forEach((link, i) => {
+          link.style.transitionDelay = `${0.04 * i}s`;
+          link.classList.add("is-entering");
+        });
+        // Remove the class after animation completes so hover transitions work normally
+        setTimeout(() => {
+          links.forEach(link => {
+            link.style.transitionDelay = "0s";
+            link.classList.remove("is-entering");
+          });
+        }, 400);
+      } else {
+        links.forEach(link => {
+          link.style.transitionDelay = "0s";
+          link.classList.remove("is-entering");
+        });
+      }
     };
 
     menuBtn.addEventListener("click", () => toggleDrawer());
 
     // Close on link click
-    drawer.querySelectorAll("a").forEach(link => {
+    links.forEach(link => {
       link.addEventListener("click", () => toggleDrawer(false));
     });
 
