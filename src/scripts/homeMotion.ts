@@ -795,14 +795,14 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
         let scale: number;
 
         if (isHero) {
-          // ── SLIDE 0: Hard visible on load. Only flies OUT. ──
+          // ── SLIDE 0: Hard visible on load. Only flies OUT along 290° line. ──
           if (t < holdEnd) {
             opacity = 1;
             tx = 0;
             ty = 0;
             scale = 1;
           } else {
-            // Continue along the SAME 290° line past reading position
+            // Fly out along the SAME 290° line — identical to slides 1-3
             const ft = (t - holdEnd) / (1.0 - holdEnd);
             const eased = ft * ft * (3 - 2 * ft);
             opacity = clamp(1 - ft * 2.5, 0, 1);
@@ -843,7 +843,13 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
           }
         }
 
-        slide.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${scale.toFixed(3)})`;
+        // With transform-origin: left center, scale > 1 expands rightward,
+        // fighting the leftward exit motion. Compensate only during fly-OUT
+        // (scale > 1) so the visual center stays on the 290° line.
+        const scaleExcess = Math.max(0, scale - 1);
+        const scaleCompX = -scaleExcess * width * 0.18;
+        const scaleCompY = -scaleExcess * 8;
+        slide.style.transform = `translate(${(tx + scaleCompX).toFixed(1)}px, ${(ty + scaleCompY).toFixed(1)}px) scale(${scale.toFixed(3)})`;
         slide.style.opacity = `${opacity.toFixed(3)}`;
       } else {
         slide.classList.remove("is-active");
