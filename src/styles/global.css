@@ -686,7 +686,14 @@ a {
   pointer-events: none;        /* just an empty viewport for the canvas warp */
 }
 
-/* CTA content: normal flow section that follows the warp — white bg, centered */
+/* Wrapper gives scroll height so footer scrolls up while CTA stays pinned */
+.lightspeed-cta-wrapper {
+  position: relative;
+  z-index: 2;
+  background: #ffffff;
+}
+
+/* CTA content section — white bg, centered */
 .lightspeed-cta-content {
   position: relative;
   z-index: 2;
@@ -1483,12 +1490,19 @@ body.menu-open .hero-wave-canvas {
     gap: 0.5rem;
   }
 
-  /* Mobile: no warp animation, just show CTA directly */
+  /* Mobile: shorter warp section for quicker animation */
   .lightspeed-warp {
-    display: none;
+    height: 120vh;
+  }
+
+  /* Mobile: CTA stays centered, footer scrolls up beneath */
+  .lightspeed-cta-wrapper {
+    height: 200vh;
   }
   .lightspeed-cta-content {
-    opacity: 1 !important;
+    position: sticky;
+    top: 0;
+    min-height: 100svh;
   }
 
   /* Mobile button sizing */

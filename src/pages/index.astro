@@ -306,17 +306,19 @@ const homeMotionConfig = {
     <div class="lightspeed-warp__sticky"></div>
   </section>
 
-  <!-- CTA content: normal flow, white background — appears right after warp completes -->
-  <section id="lightspeedContent" class="lightspeed-cta-content">
-    <h2 class="text-4xl md:text-5xl lg:text-6xl text-[#14191c]">Bring us your toughest<br/>location decision.</h2>
-    <p class="mx-auto mt-5 max-w-2xl text-lg text-[#14191c]/70">
-      We will shape options, pressure-test assumptions, and build a strategy your leadership can stand behind.
-    </p>
-    <div class="mt-8 flex flex-wrap justify-center gap-3">
-      <a class="btn-primary magnetic-btn" href={withBase("/contact")}>Talk to Vista</a>
-      <a class="btn-secondary magnetic-btn lightspeed-btn-outline" href={withBase("/teams")}>Explore our teams</a>
-    </div>
-  </section>
+  <!-- CTA content: sticky so it stays centered while footer scrolls up beneath -->
+  <div class="lightspeed-cta-wrapper">
+    <section id="lightspeedContent" class="lightspeed-cta-content">
+      <h2 class="text-4xl md:text-5xl lg:text-6xl text-[#14191c]">Bring us your toughest<br/>location decision.</h2>
+      <p class="mx-auto mt-5 max-w-2xl text-lg text-[#14191c]/70">
+        We will shape options, pressure-test assumptions, and build a strategy your leadership can stand behind.
+      </p>
+      <div class="mt-8 flex flex-wrap justify-center gap-3">
+        <a class="btn-primary magnetic-btn" href={withBase("/contact")}>Talk to Vista</a>
+        <a class="btn-secondary magnetic-btn lightspeed-btn-outline" href={withBase("/teams")}>Explore our teams</a>
+      </div>
+    </section>
+  </div>
 </Layout>
 
 <script>
