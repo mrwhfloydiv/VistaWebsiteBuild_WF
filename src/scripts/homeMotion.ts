@@ -1102,12 +1102,16 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     });
   };
 
-  // ── Planet glow: ambient atmosphere on main canvas (stays fixed) ──
+  // ── Planet glow: ambient atmosphere on main canvas (follows orbit) ──
   const drawPlanetGlow = (orbitReveal: number, nowSeconds: number, fadeMul: number) => {
     if (orbitReveal <= 0.02 || fadeMul <= 0) return;
 
+    // Track orbit menu position so glow follows it when sticky unpins
+    const orbitRect = orbitMenu?.getBoundingClientRect();
     const cx = width * 0.5;
-    const cy = height * 0.52;
+    const cy = orbitRect
+      ? (orbitRect.top + orbitRect.height * 0.5)
+      : height * 0.52;
     const baseR = isMobile ? 62 : 90;
     const planetRadius = baseR * (0.85 + orbitReveal * 0.2);
     const planetAlpha = clamp(orbitReveal * 1.4, 0, 1) * fadeMul;
