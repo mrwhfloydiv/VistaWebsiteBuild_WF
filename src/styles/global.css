@@ -68,6 +68,13 @@ a {
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* When drawer is open, header goes fully opaque — no canvas bleed */
+.site-header:has(.mobile-drawer.is-open),
+.site-header.is-drawer-open {
+  background: #000;
+  border-color: #000;
+}
+
 .site-header.is-scrolled {
   border: 1px solid rgba(0, 0, 0, 0.70);
   background: rgba(0, 0, 0, 0.70);

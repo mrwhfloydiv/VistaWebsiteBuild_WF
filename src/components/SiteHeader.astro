@@ -103,6 +103,7 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
   // Mobile drawer toggle
   const menuBtn = document.getElementById("mobileMenuBtn");
   const drawer = document.getElementById("mobileDrawer");
+  const headerEl = document.getElementById("siteHeader");
   if (menuBtn && drawer) {
     const links = Array.from(drawer.querySelectorAll<HTMLAnchorElement>(".mobile-drawer__link"));
 
@@ -117,6 +118,7 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
       menuBtn.classList.toggle("is-open", shouldOpen);
       menuBtn.setAttribute("aria-expanded", String(shouldOpen));
       drawer.setAttribute("aria-hidden", String(!shouldOpen));
+      headerEl?.classList.toggle("is-drawer-open", shouldOpen);
 
       if (shouldOpen) {
         // ── OPEN: expand drawer, cascade links in ──
