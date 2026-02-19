@@ -951,7 +951,7 @@ body.menu-open .hero-wave-canvas {
   top: 50%;
   z-index: 4;
   width: min(1400px, 96vw);
-  height: min(1100px, 92vh);
+  height: min(1000px, 84vh);
   pointer-events: none;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.94);
@@ -1311,7 +1311,7 @@ body.menu-open .hero-wave-canvas {
     left: 50%;
     top: 50%;
     width: min(100vw, 1100px);
-    height: min(92vh, 900px);
+    height: min(84vh, 820px);
   }
 
   .orbit-core {
@@ -1402,7 +1402,7 @@ body.menu-open .hero-wave-canvas {
   .orbit-menu {
     top: 50%;
     width: min(100vw, 800px);
-    height: min(95vh, 760px);
+    height: min(84vh, 680px);
   }
 
   .orbit-core {
@@ -1591,7 +1591,7 @@ body.menu-open .hero-wave-canvas {
   .orbit-menu {
     top: 50%;
     width: 100vw;
-    height: min(94vh, 680px);
+    height: min(82vh, 600px);
   }
 
   .orbit-core {
