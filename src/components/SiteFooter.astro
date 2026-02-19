@@ -2,19 +2,71 @@
 const base = import.meta.env.BASE_URL;
 const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
 const withBase = (path: string) => `${baseWithSlash}${path.startsWith("/") ? path.slice(1) : path}`;
+
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/teams", label: "Teams" },
+  { href: "/about", label: "About" },
+  { href: "/insights", label: "Insights" },
+  { href: "/contact", label: "Contact" },
+];
 ---
 
-<footer class="mt-24 border-t border-white/10 bg-[#101418] py-10">
-  <div class="section-shell flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-    <div class="flex items-center gap-3">
-      <img src={withBase("/logos/vista-mark-white.png")} alt="" class="h-9 w-9 object-contain" />
-      <div>
-        <p class="font-semibold">Vista Site Selection</p>
-        <p class="text-sm text-white/65">Location strategy. Incentives. Analytics.</p>
+<footer class="site-footer">
+  <div class="footer-divider"></div>
+
+  <div class="section-shell footer-grid">
+    <!-- Column 1: Logo + Tagline -->
+    <div class="footer-brand">
+      <img
+        src={withBase("/logos/simplified-white-text-red-arrow.png")}
+        alt="Vista Site Selection"
+        class="footer-logo"
+      />
+      <p class="footer-tagline">Data. Analytics. Incentives.</p>
+    </div>
+
+    <!-- Column 2: Navigation -->
+    <nav class="footer-nav" aria-label="Footer navigation">
+      <h4 class="footer-heading">Navigate</h4>
+      <ul>
+        {navLinks.map(link => (
+          <li><a href={withBase(link.href)}>{link.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+
+    <!-- Column 3: Contact -->
+    <div class="footer-contact">
+      <h4 class="footer-heading">Contact</h4>
+      <address>
+        <p>52 East Gay Street</p>
+        <p>Columbus, Ohio 43215</p>
+        <p class="mt-3">
+          <a href="mailto:Info@vistasiteselection.com">Info@vistasiteselection.com</a>
+        </p>
+      </address>
+    </div>
+
+    <!-- Column 4: Connect -->
+    <div class="footer-social">
+      <h4 class="footer-heading">Connect</h4>
+      <div class="footer-social-links">
+        <a href="https://www.linkedin.com/company/vista-site-selection/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://www.youtube.com/@vistasiteselection6416" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.546 12 3.546 12 3.546s-7.505 0-9.377.504A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.504 9.376.504 9.376.504s7.505 0 9.377-.504a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </a>
       </div>
     </div>
-    <p class="text-sm text-white/65">
-      Mock build for redesign planning - {new Date().getFullYear()} Vista Site Selection
-    </p>
+  </div>
+
+  <!-- Legal bar -->
+  <div class="section-shell footer-legal">
+    <p>Vista Site Selection is an ancillary business of <a href="https://www.vorys.com/" target="_blank" rel="noopener noreferrer">Vorys, Sater, Seymour and Pease LLP</a>.</p>
+    <div class="footer-legal-links">
+      <span>&copy; {new Date().getFullYear()} Vista Site Selection LLC</span>
+    </div>
   </div>
 </footer>

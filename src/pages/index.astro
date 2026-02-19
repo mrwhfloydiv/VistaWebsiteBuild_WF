@@ -199,18 +199,19 @@ const homeMotionConfig = {
     </div>
   </section>
 
+  <!-- ── 1. METRIC COUNTERS ── -->
   <section class="section-shell py-8">
     <div class="metric-grid">
       <article class="metric-tile" data-reveal>
-        <p class="stat-number text-[#ebaa1f]">1,000+</p>
+        <p class="stat-number text-[#ebaa1f]" data-counter data-target="1000" data-suffix="+">0</p>
         <p class="mono text-sm text-white/75">PROJECTS SUPPORTED</p>
       </article>
       <article class="metric-tile" data-reveal>
-        <p class="stat-number text-[#b5d9ee]">$4B+</p>
+        <p class="stat-number text-[#b5d9ee]" data-counter data-prefix="$" data-target="4" data-suffix="B+">0</p>
         <p class="mono text-sm text-white/75">INCENTIVES NEGOTIATED</p>
       </article>
       <article class="metric-tile" data-reveal>
-        <p class="stat-number text-white">40+</p>
+        <p class="stat-number text-white" data-counter data-target="40" data-suffix="+">0</p>
         <p class="mono text-sm text-white/75">MARKETS ANALYZED YEARLY</p>
       </article>
       <article class="metric-tile" data-reveal>
@@ -220,109 +221,99 @@ const homeMotionConfig = {
     </div>
   </section>
 
-  <section class="section-shell py-16">
-    <div class="panel p-6 md:p-8" data-reveal>
-      <div class="mb-4 flex items-center justify-between gap-4">
-        <h2 class="text-3xl md:text-4xl">How Vista runs engagements</h2>
-        <span class="chip">Client Workflow</span>
-      </div>
-      <div class="process-rail">
-        <article>
-          <span class="mono">01</span>
-          <h3>Frame Decision</h3>
-          <p>Lock the strategic criteria and business constraints.</p>
-        </article>
-        <article>
-          <span class="mono">02</span>
-          <h3>Model Markets</h3>
-          <p>Score labor, cost, risk, and operational fit.</p>
-        </article>
-        <article>
-          <span class="mono">03</span>
-          <h3>Shape Incentives</h3>
-          <p>Build and negotiate package structures with leverage.</p>
-        </article>
-        <article>
-          <span class="mono">04</span>
-          <h3>Execute Confidently</h3>
-          <p>Move from selection to launch with implementation rigor.</p>
-        </article>
-      </div>
-    </div>
-  </section>
-
+  <!-- ── 2. PROCESS TIMELINE ── -->
   <section class="section-shell py-20">
-    <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div class="mb-10 flex flex-wrap items-end justify-between gap-4">
       <div class="space-y-2">
-        <span class="chip">Bucketed Teams</span>
-        <h2 data-reveal class="text-4xl md:text-5xl">Specialized teams. One strategic engine.</h2>
+        <span class="chip">Client Workflow</span>
+        <h2 data-reveal class="text-3xl md:text-4xl">How Vista runs engagements</h2>
       </div>
-      <a href={withBase("/teams")} class="btn-secondary">View all teams</a>
     </div>
-    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {
-        teamBuckets.map((team) => (
-          <a href={withBase(`/teams/${team.slug}`)} class="team-card" style={`--bucket-color:${team.accent};`} data-reveal>
-            <p class="mono mb-4 text-xs text-white/70">{team.shortName}</p>
-            <h3 class="mb-3 text-2xl">{team.name}</h3>
-            <p class="text-sm text-white/75">{team.summary}</p>
-            <p class="mt-6 text-sm font-semibold text-white">Meet experts -></p>
-          </a>
-        ))
-      }
+    <div class="process-timeline" data-reveal>
+      <div class="process-timeline__track">
+        <div class="process-timeline__line">
+          <div class="process-timeline__line-fill"></div>
+        </div>
+        <div class="process-timeline__step" data-step>
+          <div class="process-timeline__dot"></div>
+          <div class="process-timeline__content">
+            <span class="process-timeline__num">01</span>
+            <h3 class="process-timeline__title">Frame Decision</h3>
+            <p class="process-timeline__desc">Lock the strategic criteria and business constraints.</p>
+          </div>
+        </div>
+        <div class="process-timeline__step" data-step>
+          <div class="process-timeline__dot"></div>
+          <div class="process-timeline__content">
+            <span class="process-timeline__num">02</span>
+            <h3 class="process-timeline__title">Model Markets</h3>
+            <p class="process-timeline__desc">Score labor, cost, risk, and operational fit.</p>
+          </div>
+        </div>
+        <div class="process-timeline__step" data-step>
+          <div class="process-timeline__dot"></div>
+          <div class="process-timeline__content">
+            <span class="process-timeline__num">03</span>
+            <h3 class="process-timeline__title">Shape Incentives</h3>
+            <p class="process-timeline__desc">Build and negotiate package structures with leverage.</p>
+          </div>
+        </div>
+        <div class="process-timeline__step" data-step>
+          <div class="process-timeline__dot"></div>
+          <div class="process-timeline__content">
+            <span class="process-timeline__num">04</span>
+            <h3 class="process-timeline__title">Execute Confidently</h3>
+            <p class="process-timeline__desc">Move from selection to launch with implementation rigor.</p>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="section-shell py-8">
-    <div class="grid gap-4 lg:grid-cols-3">
-      <article class="panel p-6" data-reveal>
-        <h3 class="mb-3 text-2xl">How We Win</h3>
-        <p class="text-white/80">We combine site strategy, incentives, and analytics from day one.</p>
-      </article>
-      <article class="panel p-6" data-reveal>
-        <h3 class="mb-3 text-2xl">How We De-risk</h3>
-        <p class="text-white/80">We model downside early and align governance before execution starts.</p>
-      </article>
-      <article class="panel p-6" data-reveal>
-        <h3 class="mb-3 text-2xl">How We Differentiate</h3>
-        <p class="text-white/80">We turn technical analysis into clear executive choices fast.</p>
-      </article>
-    </div>
-  </section>
-
+  <!-- ── 3. DIFFERENTIATORS ── -->
   <section class="section-shell py-20">
-    <div class="grid gap-4 lg:grid-cols-2">
-      <article class="rounded-2xl border border-white/12 bg-[#b22c2e] p-7 text-white" data-reveal>
-        <p class="mono mb-4 text-sm">Case Snapshot</p>
-        <h3 class="mb-3 text-3xl">Large Manufacturing Relocation</h3>
-        <p class="mb-4 text-white/90">
-          Vista built a multi-state strategy, secured incentive lift, and reduced timeline risk with implementation-ready
-          guidance.
-        </p>
-        <p class="mono text-sm">Outcome: Faster launch + stronger economics</p>
-      </article>
-      <article class="rounded-2xl border border-white/12 bg-[#1b2429] p-7" data-reveal>
-        <p class="mono mb-4 text-sm text-white/75">Case Snapshot</p>
-        <h3 class="mb-3 text-3xl text-[#b5d9ee]">Mission-Critical Facility Expansion</h3>
-        <p class="mb-4 text-white/85">
-          Data center and incentives teams aligned utility depth, market access, and jurisdiction strategy to compress
-          decision cycles.
-        </p>
-        <p class="mono text-sm text-white/70">Outcome: Better confidence at board approval</p>
-      </article>
+    <div class="diff-section">
+      <div class="diff-header" data-reveal>
+        <span class="chip">The Vista Edge</span>
+        <h2 class="mt-3 text-4xl md:text-5xl">Three reasons we<br/>don't lose.</h2>
+      </div>
+      <div class="diff-cards">
+        <article class="diff-card" data-reveal>
+          <div class="diff-card__number">01</div>
+          <div class="diff-card__accent" style="--diff-accent: #ebaa1f;"></div>
+          <h3 class="diff-card__title">We integrate from day one</h3>
+          <p class="diff-card__text">Site strategy, incentives, and analytics operate as one team from the first call. No handoffs. No silos. One engine.</p>
+        </article>
+        <article class="diff-card" data-reveal>
+          <div class="diff-card__number">02</div>
+          <div class="diff-card__accent" style="--diff-accent: #b5d9ee;"></div>
+          <h3 class="diff-card__title">We model downside early</h3>
+          <p class="diff-card__text">Every recommendation is pressure-tested against labor risk, regulatory shifts, and governance alignment before it reaches your board.</p>
+        </article>
+        <article class="diff-card" data-reveal>
+          <div class="diff-card__number">03</div>
+          <div class="diff-card__accent" style="--diff-accent: #b22c2e;"></div>
+          <h3 class="diff-card__title">We turn analysis into decisions</h3>
+          <p class="diff-card__text">Technical depth means nothing if leadership can't act on it. We translate complexity into clear executive choices — fast.</p>
+        </article>
+      </div>
     </div>
   </section>
 
-  <section class="section-shell pb-18">
-    <div class="panel rounded-2xl p-8 text-center">
-      <span class="chip">Ready to move?</span>
-      <h2 data-reveal class="mt-4 text-4xl md:text-5xl">Bring us your toughest location decision.</h2>
-      <p class="mx-auto mt-4 max-w-2xl text-lg text-white/80">
-        We will shape options, pressure-test assumptions, and build a strategy your leadership can stand behind.
-      </p>
-      <div class="mt-7 flex flex-wrap justify-center gap-3">
-        <a class="btn-primary magnetic-btn" href={withBase("/contact")}>Talk to Vista</a>
-        <a class="btn-secondary magnetic-btn" href={withBase("/teams/incentives-compliance")}>Speak with Incentives team</a>
+  <!-- ── 4. LIGHTSPEED CTA ── -->
+  <section id="lightspeedCta" class="lightspeed-cta">
+    <div class="lightspeed-cta__sticky">
+      <canvas id="lightspeedCanvas" class="lightspeed-cta__canvas" aria-hidden="true"></canvas>
+      <div id="lightspeedFlash" class="lightspeed-cta__flash" aria-hidden="true"></div>
+      <div id="lightspeedContent" class="lightspeed-cta__content">
+        <h2 class="text-4xl md:text-5xl lg:text-6xl">Bring us your toughest<br/>location decision.</h2>
+        <p class="mx-auto mt-5 max-w-2xl text-lg text-white/80">
+          We will shape options, pressure-test assumptions, and build a strategy your leadership can stand behind.
+        </p>
+        <div class="mt-8 flex flex-wrap justify-center gap-3">
+          <a class="btn-primary magnetic-btn" href={withBase("/contact")}>Talk to Vista</a>
+          <a class="btn-secondary magnetic-btn" href={withBase("/teams")}>Explore our teams</a>
+        </div>
       </div>
     </div>
   </section>
@@ -344,4 +335,293 @@ const homeMotionConfig = {
     cleanupHomeMotion?.();
     cleanupHomeMotion = null;
   });
+</script>
+
+<script>
+  // ── Counter animation ──
+  const animateCounter = (el: HTMLElement) => {
+    const target = parseInt(el.dataset.target || "0", 10);
+    const prefix = el.dataset.prefix || "";
+    const suffix = el.dataset.suffix || "";
+    const duration = 1200;
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(eased * target);
+      el.textContent = `${prefix}${current.toLocaleString()}${suffix}`;
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+
+    requestAnimationFrame(tick);
+  };
+
+  // ── Timeline reveal ──
+  const revealTimeline = (el: HTMLElement) => {
+    el.classList.add("is-revealed");
+  };
+
+  // ── IntersectionObserver for counters + timeline ──
+  const setupObservers = () => {
+    const counterEls = document.querySelectorAll<HTMLElement>("[data-counter]");
+    const timelineEl = document.querySelector<HTMLElement>(".process-timeline");
+
+    const counterObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          animateCounter(entry.target as HTMLElement);
+          counterObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
+
+    counterEls.forEach(el => counterObserver.observe(el));
+
+    if (timelineEl) {
+      const timelineObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            revealTimeline(entry.target as HTMLElement);
+            timelineObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.2 });
+
+      timelineObserver.observe(timelineEl);
+    }
+  };
+
+  setupObservers();
+  document.addEventListener("astro:page-load", setupObservers);
+</script>
+
+<script>
+  // ── Lightspeed CTA animation ──
+  // Sticky starfield that accelerates to warp speed, flashes white, reveals CTA.
+  // The section is 300vh tall (250vh on mobile) with a sticky inner viewport.
+  // Scroll progress through the section drives the entire animation.
+
+  const initLightspeed = () => {
+    const section = document.getElementById("lightspeedCta");
+    const canvas = document.getElementById("lightspeedCanvas") as HTMLCanvasElement | null;
+    const flash = document.getElementById("lightspeedFlash");
+    const content = document.getElementById("lightspeedContent");
+    if (!section || !canvas || !flash || !content) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let w = 0;
+    let h = 0;
+    let animating = false;
+    let frameId = 0;
+    let progress = 0;       // 0 → 1 driven by scroll through the 300vh section
+    let lastTime = 0;
+
+    // Star pool
+    type LStar = { x: number; y: number; z: number; size: number; prevX: number; prevY: number; init: boolean };
+    const STAR_COUNT = 500;
+    const DEPTH = 1400;
+    const stars: LStar[] = [];
+
+    const resetStar = (s: LStar, maxZ: number) => {
+      s.x = (Math.random() - 0.5) * w * 1.8;
+      s.y = (Math.random() - 0.5) * h * 1.8;
+      s.z = Math.random() * maxZ;
+      s.size = 0.3 + Math.random() * 1.2;
+      s.init = false;
+    };
+
+    const resize = () => {
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const initStars = () => {
+      stars.length = 0;
+      for (let i = 0; i < STAR_COUNT; i++) {
+        const s: LStar = { x: 0, y: 0, z: 0, size: 0, prevX: 0, prevY: 0, init: false };
+        resetStar(s, DEPTH);
+        stars.push(s);
+      }
+    };
+
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+    const smoothstep = (a: number, b: number, t: number) => {
+      const x = clamp((t - a) / (b - a), 0, 1);
+      return x * x * (3 - 2 * x);
+    };
+
+    const draw = (now: number) => {
+      if (!animating) return;
+      const delta = lastTime ? Math.min((now - lastTime) / 1000, 0.05) : 0.016;
+      lastTime = now;
+
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const focal = Math.max(w, h) * 0.9;
+
+      // ── Phase map (driven by scroll progress 0→1) ──
+      //  0.00–0.15  calm stars, gentle drift (just entered)
+      //  0.15–0.50  stars begin to accelerate, streaks form
+      //  0.50–0.70  full warp, maximum streaks
+      //  0.70–0.82  white flash builds, stars fade out
+      //  0.82–1.00  pure white → CTA fades in, flash recedes
+      const warpT = smoothstep(0.10, 0.55, progress);
+      const streakT = smoothstep(0.15, 0.65, progress);
+      const flashT = smoothstep(0.58, 0.78, progress);
+      const starFade = 1 - smoothstep(0.65, 0.78, progress);
+      const contentReveal = smoothstep(0.80, 0.92, progress);
+      const flashRecede = smoothstep(0.74, 0.86, progress);
+
+      // Speed: from gentle to extreme
+      const baseSpeed = 0.5;
+      const warpSpeed = baseSpeed + warpT * 32;
+
+      // Clear
+      ctx.clearRect(0, 0, w, h);
+
+      // Background: dark → white during flash → dark again for CTA
+      const bgBright = Math.round(flashT * (1 - flashRecede) * 255);
+      ctx.fillStyle = `rgb(${bgBright}, ${bgBright}, ${bgBright})`;
+      ctx.fillRect(0, 0, w, h);
+
+      if (starFade > 0.01) {
+        for (const star of stars) {
+          star.z -= warpSpeed * delta * (6 + star.size * 3);
+
+          if (star.z <= 1) {
+            resetStar(star, DEPTH);
+            star.z = DEPTH;
+          }
+
+          const proj = focal / star.z;
+          const depthMix = clamp(1 - star.z / DEPTH, 0, 1);
+          const sx = cx + star.x * proj;
+          const sy = cy + star.y * proj;
+
+          if (sx < -80 || sx > w + 80 || sy < -80 || sy > h + 80) {
+            resetStar(star, DEPTH);
+            continue;
+          }
+
+          const bright = clamp(200 + depthMix * 55, 0, 255);
+          const alpha = clamp((0.15 + depthMix * 0.85) * starFade, 0, 1);
+          const radius = clamp(star.size * (0.5 + depthMix * 2.0), 0.4, 3.5);
+
+          // Streak lines during warp
+          if (streakT > 0.05 && star.init) {
+            const streakAlpha = alpha * streakT * 0.9;
+            // Direction from center → star position
+            const dx = sx - cx;
+            const dy = sy - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            // Streak length grows with warp intensity
+            const sLen = 4 + streakT * (50 + depthMix * 80);
+
+            ctx.strokeStyle = `rgba(${bright}, ${bright}, ${clamp(bright + 20, 0, 255)}, ${streakAlpha})`;
+            ctx.lineWidth = clamp(radius * 0.6, 0.3, 2.0);
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx - nx * sLen, sy - ny * sLen);
+            ctx.stroke();
+          }
+
+          // Star dot
+          ctx.fillStyle = `rgba(${bright}, ${bright}, ${clamp(bright + 15, 0, 255)}, ${alpha})`;
+          ctx.beginPath();
+          ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          star.prevX = sx;
+          star.prevY = sy;
+          star.init = true;
+        }
+      }
+
+      // Radial light burst at center during warp
+      if (warpT > 0.1 && starFade > 0.01) {
+        const burstAlpha = warpT * 0.18 * starFade;
+        const burstR = Math.max(w, h) * (0.3 + warpT * 0.5);
+        const burst = ctx.createRadialGradient(cx, cy, 0, cx, cy, burstR);
+        burst.addColorStop(0, `rgba(200, 220, 255, ${burstAlpha})`);
+        burst.addColorStop(0.5, `rgba(180, 200, 255, ${burstAlpha * 0.3})`);
+        burst.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = burst;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // Flash overlay — peaks white then fully recedes to dark
+      const flashOpacity = clamp(flashT - flashRecede, 0, 1);
+      flash.style.opacity = `${flashOpacity}`;
+
+      // Content — driven by scroll, fully reversible
+      content.style.opacity = `${contentReveal}`;
+      content.style.transform = `translateY(${(1 - contentReveal) * 30}px) scale(${0.96 + contentReveal * 0.04})`;
+
+      frameId = requestAnimationFrame(draw);
+    };
+
+    const startAnimation = () => {
+      if (animating) return;
+      animating = true;
+      lastTime = 0;
+      frameId = requestAnimationFrame(draw);
+    };
+
+    const stopAnimation = () => {
+      animating = false;
+      if (frameId) {
+        cancelAnimationFrame(frameId);
+        frameId = 0;
+      }
+    };
+
+    resize();
+    initStars();
+
+    // Scroll progress: 0 when section top at viewport bottom, 1 when scrolled through
+    const updateProgress = () => {
+      const rect = section.getBoundingClientRect();
+      const scrollRange = section.offsetHeight - window.innerHeight;
+      if (scrollRange <= 0) { progress = 0; return; }
+      // How far the section top has scrolled past the viewport top
+      const scrolled = -rect.top;
+      progress = clamp(scrolled / scrollRange, 0, 1);
+    };
+
+    const onScroll = () => {
+      updateProgress();
+    };
+
+    // IO: start/stop canvas rendering when section is visible
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          startAnimation();
+        } else {
+          stopAnimation();
+        }
+      });
+    }, { threshold: 0, rootMargin: "200px 0px 200px 0px" });
+
+    io.observe(section);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", () => { resize(); updateProgress(); });
+    updateProgress();
+  };
+
+  initLightspeed();
+  document.addEventListener("astro:page-load", initLightspeed);
 </script>
