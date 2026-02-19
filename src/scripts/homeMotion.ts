@@ -281,6 +281,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   const mobilePopupDesc = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__desc") ?? null;
   const mobilePopupCard = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__card") ?? null;
   const lightspeedSection = document.getElementById("lightspeedCta");
+  const lightspeedContent = document.getElementById("lightspeedContent");
 
   if (!canvas || !slides.length) return () => {};
 
@@ -1924,8 +1925,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       if (lsScrollRange > 0) {
         const lsScrolled = -lsRect.top;
         const lsProgress = clamp(lsScrolled / lsScrollRange, 0, 1);
-        // Warp: ramp up 0.05→0.60 scroll through section, peak at 0.6
-        lightspeedWarp = smoothstep(0.03, 0.55, lsProgress);
+        // Warp: ramp through 160vh section — completes before sticky un-pins
+        lightspeedWarp = smoothstep(0.05, 0.82, lsProgress);
       }
     }
 
@@ -1946,15 +1947,14 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     // Once lightspeed flash hits full white, hide the canvas so white CTA/footer shows
     const lsFullWhite = lightspeedWarp > 0.97;
     canvas.style.opacity = lsFullWhite ? "0" : "1";
+    // Warp section turns white in sync so no dark gap shows beneath canvas
     if (lightspeedSection) {
-      // Switch section bg from transparent → white in sync with canvas hide
       lightspeedSection.style.background = lsFullWhite ? "#ffffff" : "transparent";
-      // Control CTA content visibility — hidden until flash completes
-      const lsContent = lightspeedSection.querySelector<HTMLElement>('.lightspeed-cta__content');
-      if (lsContent) {
-        const contentFade = lsFullWhite ? 1 : 0;
-        lsContent.style.opacity = `${contentFade}`;
-      }
+    }
+    // Fade in the CTA content section as the flash completes
+    if (lightspeedContent) {
+      const contentFade = smoothstep(0.88, 0.98, lightspeedWarp);
+      lightspeedContent.style.opacity = `${contentFade}`;
     }
 
     // Planet glow on main canvas (fades with scroll exit)

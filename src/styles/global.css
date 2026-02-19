@@ -640,28 +640,31 @@ a {
 }
 
 /* ── Lightspeed CTA ── */
-.lightspeed-cta {
+/* Warp zone: tall section with sticky viewport for the canvas animation */
+.lightspeed-warp {
   position: relative;
-  height: 300vh;
+  z-index: 1;                  /* above the fixed canvas (z-index:0) so bg paints over it */
+  height: 160vh;
   background: transparent;
 }
 
-.lightspeed-cta__sticky {
+.lightspeed-warp__sticky {
   position: sticky;
   top: 0;
   height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  pointer-events: none;        /* just an empty viewport for the canvas warp */
 }
 
-.lightspeed-cta__content {
+/* CTA content: normal flow section that follows the warp — white bg, centered */
+.lightspeed-cta-content {
   position: relative;
   z-index: 2;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 clamp(1rem, 4vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(4rem, 10vh, 8rem) clamp(1rem, 4vw, 2rem);
+  background: #ffffff;
   text-align: center;
   opacity: 0;
   transition: opacity 0.4s ease;
@@ -1449,8 +1452,12 @@ body.menu-open .hero-wave-canvas {
     gap: 0.5rem;
   }
 
-  .lightspeed-cta {
-    height: 250vh;
+  /* Mobile: no warp animation, just show CTA directly */
+  .lightspeed-warp {
+    display: none;
+  }
+  .lightspeed-cta-content {
+    opacity: 1 !important;
   }
 
   /* Mobile button sizing */
