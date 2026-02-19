@@ -401,8 +401,7 @@ a {
 .glass,
 .panel {
   border: 1px solid var(--border-soft);
-  background: linear-gradient(140deg, rgba(250, 250, 250, 0.09), rgba(250, 250, 250, 0.02));
-  backdrop-filter: blur(12px);
+  background: transparent;
 }
 
 .panel {
@@ -415,7 +414,7 @@ a {
   border: 1px solid rgba(250, 250, 250, 0.12);
   border-radius: 1rem;
   padding: 0.6rem;
-  background: rgba(13, 17, 21, 0.66);
+  background: transparent;
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -423,7 +422,7 @@ a {
   border-radius: 0.8rem;
   border: 1px solid rgba(250, 250, 250, 0.08);
   padding: 1rem;
-  background: linear-gradient(155deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+  background: transparent;
 }
 
 .stat-number {
@@ -438,7 +437,7 @@ a {
   border-radius: 1.2rem;
   border: 1px solid var(--border-soft);
   padding: 1.2rem;
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
+  background: transparent;
   transition: transform 0.28s ease, border-color 0.28s ease;
 }
 
@@ -499,7 +498,7 @@ a {
   border: 1px solid rgba(250, 250, 250, 0.12);
   border-radius: 0.9rem;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.18);
+  background: transparent;
 }
 
 .process-rail article span {
@@ -522,11 +521,10 @@ a {
   height: 520svh;
 }
 
-/* Content below hero must paint above the fixed canvas */
+/* Content below hero must paint above the fixed canvas — but stay transparent for stars */
 .hero-sequence-wrapper ~ * {
   position: relative;
   z-index: 1;
-  background: rgb(5, 8, 11);
 }
 
 .hero-sequence-sticky {
@@ -1355,7 +1353,7 @@ body.menu-open .hero-wave-canvas {
   overflow: hidden;
   border-radius: 1.2rem;
   border: 1px solid var(--border-soft);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
+  background: transparent;
   transition: transform 0.32s ease, border-color 0.32s ease, box-shadow 0.32s ease;
 }
 

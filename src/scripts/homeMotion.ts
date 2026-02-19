@@ -1104,11 +1104,13 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   const drawPlanetGlow = (orbitReveal: number, nowSeconds: number, fadeMul: number) => {
     if (orbitReveal <= 0.02 || fadeMul <= 0) return;
 
-    // Track orbit menu position so glow follows it when sticky unpins
-    const orbitRect = orbitMenu?.getBoundingClientRect();
-    const cx = width * 0.5;
-    const cy = orbitRect
-      ? (orbitRect.top + orbitRect.height * 0.5)
+    // Track the hex globe (orbit-core) so glow follows it exactly
+    const coreRect = orbitCore?.getBoundingClientRect();
+    const cx = coreRect
+      ? (coreRect.left + coreRect.width * 0.5)
+      : width * 0.5;
+    const cy = coreRect
+      ? (coreRect.top + coreRect.height * 0.5)
       : height * 0.52;
     const baseR = isMobile ? 62 : 90;
     const planetRadius = baseR * (0.85 + orbitReveal * 0.2);
@@ -1845,8 +1847,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       heroScrollCue.style.opacity = `${introOpacity}`;
     }
 
-    // Scroll exit fade — only the orbit glow fades, stars stay
-    const canvasOrbitFade = 1 - smoothstep(0.96, 1.0, scrollProgress);
+    // Scroll exit fade — orbit glow + haze fade as sticky unpins
+    const canvasOrbitFade = 1 - smoothstep(0.92, 0.98, scrollProgress);
 
     drawAtmosphere(stageThemes[stageLower], stageThemes[stageUpper], stageMix, canvasOrbitFade);
     const orbitDampen = 1 - smoothstep(config.orbit.start - 0.02, config.orbit.start + 0.04, scrollProgress);
