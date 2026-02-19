@@ -164,49 +164,31 @@ a {
   transform: translateY(-6px) rotate(-45deg);
 }
 
-/* ── Mobile drawer — half-screen glass overlay with cascade ── */
+/* ── Mobile drawer — push-down block that shoves content below ── */
 .mobile-drawer {
   display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 54vh;
-  z-index: 10000;
-  background: rgba(5, 8, 11, 0.92);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  overflow: hidden;
+  max-height: 0;
+  background: rgb(5, 8, 11);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
-  pointer-events: none;
-  /* Slide down from above + fade */
-  transform: translateY(-100%);
-  opacity: 0;
-  transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.6);
+  transition: max-height 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .mobile-drawer.is-open {
-  transform: translateY(0);
-  opacity: 1;
-  pointer-events: auto;
+  max-height: 50vh;
 }
 
-/* Closing animation — slightly faster, ease-in feel */
 .mobile-drawer.is-closing {
-  transform: translateY(-100%);
-  opacity: 0;
-  transition: transform 0.4s cubic-bezier(0.5, 0, 0.75, 0),
-              opacity 0.3s cubic-bezier(0.5, 0, 0.75, 0);
-  pointer-events: none;
+  max-height: 0;
+  transition: max-height 0.4s cubic-bezier(0.5, 0, 0.75, 0);
 }
 
 .mobile-drawer__nav {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  height: 100%;
-  padding: 3.5rem 0 1.5rem;
+  padding: 1rem 0 1.25rem;
   gap: 0;
 }
 

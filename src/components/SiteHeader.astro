@@ -119,7 +119,7 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
       drawer.setAttribute("aria-hidden", String(!shouldOpen));
 
       if (shouldOpen) {
-        // ── OPEN: remove closing class, add is-open, cascade links ──
+        // ── OPEN: expand drawer, cascade links in ──
         drawer.classList.remove("is-closing");
         drawer.classList.add("is-open");
 
@@ -138,22 +138,20 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
         }, 80 * links.length + 400);
 
       } else {
-        // ── CLOSE: reverse cascade then slide drawer up ──
-        // Stagger links out in reverse order
+        // ── CLOSE: reverse cascade links, then collapse drawer ──
         const totalLinks = links.length;
         links.forEach((link, i) => {
           const reverseI = totalLinks - 1 - i;
           link.style.transitionDelay = `${0.04 * reverseI}s`;
         });
 
-        // Remove is-open so links animate back to hidden state
+        // Remove is-open so links animate back to hidden
         drawer.classList.remove("is-open");
 
-        // After links have cascaded out, slide the drawer panel up
-        const linkCascadeTime = 0.04 * totalLinks * 1000 + 200;
+        // After links cascade out, collapse the drawer height
+        const linkCascadeTime = 0.04 * totalLinks * 1000 + 150;
         closeTimeout = setTimeout(() => {
           drawer.classList.add("is-closing");
-          // After drawer slides up, clean everything
           setTimeout(() => {
             drawer.classList.remove("is-closing");
             links.forEach(link => {
