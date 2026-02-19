@@ -275,6 +275,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   const slides = Array.from(document.querySelectorAll<HTMLElement>("[data-slide]"));
   const skipIntroButton = document.getElementById("skipIntroBtn") as HTMLButtonElement | null;
   const scrollIndicator = document.getElementById("scrollDownIndicator");
+  const heroScrollCue = document.getElementById("heroScrollCue");
   const mobilePopupOverlay = document.getElementById("mobilePopupOverlay");
   const mobilePopupLabel = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__label") ?? null;
   const mobilePopupDesc = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__desc") ?? null;
@@ -1832,6 +1833,11 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     if (introPanel) {
       introPanel.style.opacity = `${introOpacity}`;
       introPanel.style.pointerEvents = introOpacity < 0.2 ? "none" : "auto";
+    }
+
+    // Hero scroll cue — visible while hero is visible, disappears with it
+    if (heroScrollCue) {
+      heroScrollCue.style.opacity = `${introOpacity}`;
     }
 
     // Scroll exit fade — canvas glow fades when sticky section unpins
