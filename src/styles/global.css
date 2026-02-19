@@ -515,6 +515,13 @@ a {
   height: 520svh;
 }
 
+/* Content below hero must paint above the fixed canvas */
+.hero-sequence-wrapper ~ * {
+  position: relative;
+  z-index: 1;
+  background: rgb(5, 8, 11);
+}
+
 .hero-sequence-sticky {
   position: sticky;
   top: 0;

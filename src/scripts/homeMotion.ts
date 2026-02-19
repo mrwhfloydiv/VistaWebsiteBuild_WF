@@ -1840,8 +1840,11 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       heroScrollCue.style.opacity = `${introOpacity}`;
     }
 
-    // Scroll exit fade — canvas glow fades when sticky section unpins
+    // Scroll exit fade — entire canvas fades out when sticky section unpins
     const canvasOrbitFade = 1 - smoothstep(0.96, 1.0, scrollProgress);
+    if (canvas) {
+      canvas.style.opacity = `${canvasOrbitFade}`;
+    }
 
     drawAtmosphere(stageThemes[stageLower], stageThemes[stageUpper], stageMix);
     const orbitDampen = 1 - smoothstep(config.orbit.start - 0.02, config.orbit.start + 0.04, scrollProgress);
