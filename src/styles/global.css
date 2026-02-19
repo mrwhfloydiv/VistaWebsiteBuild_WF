@@ -443,6 +443,7 @@ a {
 .hero-sequence-sticky {
   position: sticky;
   top: 0;
+  z-index: 1;
   height: 100svh;
   overflow: hidden;
   border-bottom: 1px solid rgba(250, 250, 250, 0.08);
