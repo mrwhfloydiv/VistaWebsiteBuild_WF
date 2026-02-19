@@ -1465,7 +1465,9 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     sequenceBoost: number,
     stageSpeedNormalized: number,
     orbitDampen: number,
-    orbitFade = 1
+    orbitFade = 1,
+    globeCx = width * 0.5,
+    globeCy = height * 0.52
   ) => {
     const centerX = width * 0.5;
     const centerY = height * 0.5;
@@ -1551,11 +1553,11 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     if (orbitReveal > 0.06 && orbitFade > 0) {
       const haloAlpha = (0.04 + orbitReveal * 0.12) * orbitFade;
       const halo = context.createRadialGradient(
-        width * 0.5,
-        height * 0.52,
+        globeCx,
+        globeCy,
         0,
-        width * 0.5,
-        height * 0.52,
+        globeCx,
+        globeCy,
         Math.max(width, height) * 0.45
       );
       halo.addColorStop(0, `rgba(74, 124, 230, ${haloAlpha})`);
@@ -1850,8 +1852,9 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     }
 
     // Scroll exit fade — glow fades exactly as hex globe leaves viewport
-    // When globe center is in the viewport → full glow; as it scrolls off the top → glow fades to 0
+    // Track globe center so ALL glow effects (halo + planet glow) follow it
     const coreEl = orbitCore?.getBoundingClientRect();
+    const globeCenterX = coreEl ? (coreEl.left + coreEl.width * 0.5) : width * 0.5;
     const globeCenterY = coreEl ? (coreEl.top + coreEl.height * 0.5) : height * 0.5;
     // Fade: glow is full when globe center is below 15% of viewport height,
     // gone when globe center reaches top edge (0) or above
@@ -1867,7 +1870,9 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       sequenceBoost,
       orbitSpeedReset ? 0 : boostedStageSpeed,
       orbitDampen,
-      canvasOrbitFade
+      canvasOrbitFade,
+      globeCenterX,
+      globeCenterY
     );
 
     // Planet glow on main canvas (fades with scroll exit)
