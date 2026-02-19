@@ -905,7 +905,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     initPlanetCanvas();
   };
 
-  const drawAtmosphere = (themeA: StageTheme, themeB: StageTheme, mix: number) => {
+  const drawAtmosphere = (themeA: StageTheme, themeB: StageTheme, mix: number, hazeFade = 1) => {
     const base = lerpColor(themeA.base, themeB.base, mix);
 
     if (isMobile) {
@@ -915,14 +915,17 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       return;
     }
 
-    const hazeA = lerpColor(themeA.hazeA, themeB.hazeA, mix);
-    const hazeB = lerpColor(themeA.hazeB, themeB.hazeB, mix);
-
     const backdrop = context.createLinearGradient(0, 0, 0, height);
     backdrop.addColorStop(0, `rgb(${Math.max(base[0] - 1, 1)}, ${Math.max(base[1] - 1, 2)}, ${Math.max(base[2] - 2, 4)})`);
     backdrop.addColorStop(1, `rgb(${base[0]}, ${base[1]}, ${base[2]})`);
     context.fillStyle = backdrop;
     context.fillRect(0, 0, width, height);
+
+    // Haze glows fade with orbit exit
+    if (hazeFade <= 0) return;
+
+    const hazeA = lerpColor(themeA.hazeA, themeB.hazeA, mix);
+    const hazeB = lerpColor(themeA.hazeB, themeB.hazeB, mix);
 
     const glowA = context.createRadialGradient(
       width * (0.16 + mouseX * 0.03),
@@ -932,7 +935,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       height * (0.22 + scrollProgress * 0.12),
       Math.max(width, height) * 0.7
     );
-    glowA.addColorStop(0, `rgba(${hazeA[0]}, ${hazeA[1]}, ${hazeA[2]}, 0.2)`);
+    glowA.addColorStop(0, `rgba(${hazeA[0]}, ${hazeA[1]}, ${hazeA[2]}, ${0.2 * hazeFade})`);
     glowA.addColorStop(1, "rgba(0, 0, 0, 0)");
     context.fillStyle = glowA;
     context.fillRect(0, 0, width, height);
@@ -945,7 +948,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       height * (0.06 + scrollProgress * 0.2),
       Math.max(width, height) * 0.82
     );
-    glowB.addColorStop(0, `rgba(${hazeB[0]}, ${hazeB[1]}, ${hazeB[2]}, 0.16)`);
+    glowB.addColorStop(0, `rgba(${hazeB[0]}, ${hazeB[1]}, ${hazeB[2]}, ${0.16 * hazeFade})`);
     glowB.addColorStop(1, "rgba(0, 0, 0, 0)");
     context.fillStyle = glowB;
     context.fillRect(0, 0, width, height);
@@ -1840,13 +1843,10 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       heroScrollCue.style.opacity = `${introOpacity}`;
     }
 
-    // Scroll exit fade — entire canvas fades out when sticky section unpins
+    // Scroll exit fade — only the orbit glow fades, stars stay
     const canvasOrbitFade = 1 - smoothstep(0.96, 1.0, scrollProgress);
-    if (canvas) {
-      canvas.style.opacity = `${canvasOrbitFade}`;
-    }
 
-    drawAtmosphere(stageThemes[stageLower], stageThemes[stageUpper], stageMix);
+    drawAtmosphere(stageThemes[stageLower], stageThemes[stageUpper], stageMix, canvasOrbitFade);
     const orbitDampen = 1 - smoothstep(config.orbit.start - 0.02, config.orbit.start + 0.04, scrollProgress);
     drawStarField(
       delta,
