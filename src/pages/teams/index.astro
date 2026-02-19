@@ -4,16 +4,15 @@ import { teamBuckets } from "../../data/teams";
 
 const base = import.meta.env.BASE_URL;
 const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
-const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(1) : path}`;
+const withBase = (path: string) => `${baseWithSlash}${path.startsWith("/") ? path.slice(1) : path}`;
 ---
 
-<Layout title="Vista Teams | Specialty Buckets">
+<Layout title="Our Teams | Vista Site Selection">
   <section class="section-shell py-14">
-    <span class="chip">Team Buckets</span>
+    <span class="chip">Our Teams</span>
     <h1 class="mt-4 text-5xl md:text-6xl">Choose the experts for your decision.</h1>
     <p class="mt-4 max-w-2xl text-lg text-white/80">
-      Each bucket has its own lead experts, methods, and outcome playbooks. This page is fully ready for real bios and
-      photos when you have them.
+      Each practice has its own lead experts, methods, and outcome playbooks — built for the decisions that matter most.
     </p>
   </section>
 
@@ -25,7 +24,24 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
             <p class="mono mb-3 text-xs text-white/70">{team.shortName}</p>
             <h2 class="mb-3 text-2xl">{team.name}</h2>
             <p class="text-sm text-white/75">{team.summary}</p>
-            <p class="mt-5 text-sm font-semibold">Open team page →</p>
+            <div class="mt-4 flex items-center gap-2">
+              <div class="flex -space-x-2">
+                {team.experts.slice(0, 4).map((expert) => (
+                  <img
+                    src={withBase(`/headshots/${expert.photo}`)}
+                    alt={expert.name}
+                    class="team-card__avatar"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ))}
+                {team.experts.length > 4 && (
+                  <span class="team-card__avatar-count">+{team.experts.length - 4}</span>
+                )}
+              </div>
+              <span class="mono text-xs text-white/50">{team.experts.length} expert{team.experts.length !== 1 ? "s" : ""}</span>
+            </div>
+            <p class="mt-4 text-sm font-semibold text-white/90">Meet the team &rarr;</p>
           </a>
         ))
       }

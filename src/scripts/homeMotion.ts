@@ -5,6 +5,15 @@ gsap.registerPlugin(ScrollTrigger);
 
 type ColorRGB = [number, number, number];
 
+type RingConfig = {
+  radiusFactor: number;
+  ellipseRatio: number;
+  ellipseRatioMobile: number;
+  speedMultiplier: number;
+  tiltOffset: number;
+  strokeAlpha: number;
+};
+
 type MotionConfig = {
   sequenceHeightDesktop: number;
   sequenceHeightMobile: number;
@@ -25,13 +34,14 @@ type MotionConfig = {
     full: number;
     radiusDesktop: number;
     radiusMobile: number;
+    rings: RingConfig[];
   };
 };
 
 type PartialMotionConfig = Partial<Omit<MotionConfig, "animation" | "stars" | "orbit">> & {
   animation?: Partial<MotionConfig["animation"]>;
   stars?: Partial<MotionConfig["stars"]>;
-  orbit?: Partial<MotionConfig["orbit"]>;
+  orbit?: Partial<Omit<MotionConfig["orbit"], "rings">> & { rings?: RingConfig[] };
 };
 
 type StageTheme = {
@@ -50,16 +60,10 @@ type Star = {
   prevX: number;
   prevY: number;
   initialized: boolean;
+  isVLogo: boolean;    // true → draw as tiny V mark instead of circle
+  rotation: number;    // slow spin for V logos (radians)
 };
 
-type RingParticle = {
-  ring: number;
-  angle: number;
-  speed: number;
-  size: number;
-  brightness: number;
-  tailLength: number;
-};
 
 const hexToRGB = (hex: string): ColorRGB => [
   parseInt(hex.slice(1, 3), 16),
@@ -86,7 +90,12 @@ const defaultConfig: MotionConfig = {
     start: 0.62,
     full: 0.78,
     radiusDesktop: 260,
-    radiusMobile: 178
+    radiusMobile: 178,
+    rings: [
+      { radiusFactor: 0.45, ellipseRatio: 0.52, ellipseRatioMobile: 0.60, speedMultiplier: 1.4, tiltOffset: 0, strokeAlpha: 0.10 },
+      { radiusFactor: 0.72, ellipseRatio: 0.58, ellipseRatioMobile: 0.66, speedMultiplier: 1.0, tiltOffset: 0.08, strokeAlpha: 0.14 },
+      { radiusFactor: 1.0, ellipseRatio: 0.64, ellipseRatioMobile: 0.72, speedMultiplier: 0.7, tiltOffset: -0.06, strokeAlpha: 0.18 },
+    ]
   }
 };
 
@@ -126,8 +135,14 @@ const stageThemes: StageTheme[] = [
   }
 ];
 
-const speedStages = [1, 25, 50, 100];
-const speedStageMaxBoost = 3.6;
+// Speed stages: one per slide transition boundary + idle
+//   [0] idle during hero hold
+//   [1] slide 0→1 transition (gentle start)
+//   [2] slide 1→2 (building)
+//   [3] slide 2→3 (strong)
+//   [4] final push into orbit (max)
+const speedStages = [1, 6, 18, 42, 100];
+const speedStageMaxBoost = 3.2;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
@@ -176,13 +191,16 @@ const parseConfig = (wrapper: HTMLElement): MotionConfig => {
         start: parsed.orbit?.start ?? defaultConfig.orbit.start,
         full: parsed.orbit?.full ?? defaultConfig.orbit.full,
         radiusDesktop: parsed.orbit?.radiusDesktop ?? defaultConfig.orbit.radiusDesktop,
-        radiusMobile: parsed.orbit?.radiusMobile ?? defaultConfig.orbit.radiusMobile
+        radiusMobile: parsed.orbit?.radiusMobile ?? defaultConfig.orbit.radiusMobile,
+        rings: parsed.orbit?.rings ?? defaultConfig.orbit.rings
       }
     };
   } catch {
     return defaultConfig;
   }
 };
+
+const V_LOGO_CHANCE = 0.13; // ~13% of stars are tiny V logos
 
 const createStars = (count: number, depth: number, spread: number): Star[] =>
   Array.from({ length: count }, () => ({
@@ -193,7 +211,9 @@ const createStars = (count: number, depth: number, spread: number): Star[] =>
     tint: Math.random(),
     prevX: 0,
     prevY: 0,
-    initialized: false
+    initialized: false,
+    isVLogo: Math.random() < V_LOGO_CHANCE,
+    rotation: Math.random() * Math.PI * 2,
   }));
 
 const resetStar = (star: Star, depth: number, spread: number) => {
@@ -203,6 +223,8 @@ const resetStar = (star: Star, depth: number, spread: number) => {
   star.size = Math.random() * 1.2 + 0.45;
   star.tint = Math.random();
   star.initialized = false;
+  star.isVLogo = Math.random() < V_LOGO_CHANCE;
+  star.rotation = Math.random() * Math.PI * 2;
 };
 
 const initRevealAnimations = (config: MotionConfig) => {
@@ -247,7 +269,6 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   const canvas = document.getElementById("heroWaveCanvas") as HTMLCanvasElement | null;
   const orbitMenu = document.getElementById("orbitMenu");
   const orbitCore = orbitMenu?.querySelector<HTMLElement>(".orbit-core") ?? null;
-  const headline = document.getElementById("heroHeadline");
   const introPanel = document.getElementById("heroIntro");
   const slideTrack = document.getElementById("heroSlideTrack");
   const orbitNodes = Array.from(document.querySelectorAll<HTMLElement>("[data-orbit-node]"));
@@ -263,6 +284,26 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   const lowPowerDevice =
     ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) <= 4 ||
     (navigator.hardwareConcurrency ?? 8) <= 4;
+
+  // ── V Logo stamp for star field ──
+  // Pre-render the SVG at a fixed size onto an offscreen canvas so we can
+  // stamp it at any scale/color/rotation using drawImage per frame.
+  const V_STAMP_SIZE = 32; // px — rendered once, scaled down per star
+  const vStampCanvas = document.createElement("canvas");
+  vStampCanvas.width = V_STAMP_SIZE;
+  vStampCanvas.height = V_STAMP_SIZE;
+  const vStampCtx = vStampCanvas.getContext("2d")!;
+  let vStampReady = false;
+
+  const vLogoImg = new Image();
+  const basePath = wrapper.dataset.basePath ?? "";
+  vLogoImg.src = `${basePath}/logos/vista-v-white.svg`;
+  vLogoImg.onload = () => {
+    // Draw white V onto the stamp canvas (centered, with slight padding)
+    const pad = 2;
+    vStampCtx.drawImage(vLogoImg, pad, pad, V_STAMP_SIZE - pad * 2, V_STAMP_SIZE - pad * 2);
+    vStampReady = true;
+  };
 
   let width = 0;
   let height = 0;
@@ -282,202 +323,256 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   let nodesHaveEntered = false;
   let touchSpinOffset = 0;
   let touchSpinVelocity = 0;
+  let touchTiltOffset = 0;   // Y-axis tilt from drag (breaks orbital plane)
+  let touchTiltVelocity = 0; // Y-axis momentum
   let isTouchDragging = false;
   let touchStartX = 0;
   let touchStartY = 0;
 
-  // Load V logo for canvas planet compositing
-  const vLogo = new Image();
-  const coreImg = orbitCore?.querySelector("img") as HTMLImageElement | null;
-  vLogo.src = coreImg?.src ?? "";
-  let vLogoReady = false;
-  vLogo.onload = () => { vLogoReady = true; };
 
-  // Hide DOM orbit core — canvas planet replaces it
-  if (orbitCore) orbitCore.style.display = "none";
+  // Mouse drag state
+  let isMouseDragging = false;
+  let mouseStartX = 0;
+  let mouseStartY = 0;
 
-  // ── Planet texture system (offscreen canvases) ──
-  const planetTexW = 800;
-  const planetTexH = 400;
-  const planetTexCanvas = document.createElement("canvas");
-  planetTexCanvas.width = planetTexW;
-  planetTexCanvas.height = planetTexH;
-  const planetTexCtx = planetTexCanvas.getContext("2d")!;
+  // Orbit hover-pause: freeze time-based spin when hovering a node
+  let orbitPaused = false;
+  let pauseTimeOffset = 0;  // accumulated paused time to subtract
+  let pauseStartTime = 0;   // when the current pause began
 
-  // Cloud layer offscreen
-  const cloudTexCanvas = document.createElement("canvas");
-  cloudTexCanvas.width = planetTexW;
-  cloudTexCanvas.height = planetTexH;
-  const cloudTexCtx = cloudTexCanvas.getContext("2d")!;
+  // SVG elements (created in init)
+  let svgEl: SVGSVGElement | null = null;
+  const spokeLines: SVGLineElement[] = [];
+  const spokePulseCircles: SVGCircleElement[][] = [];
+  const spokePulseTrails: SVGLineElement[][] = [];
+  const spokePulseGrads: SVGLinearGradientElement[][] = [];
 
-  // Sphere render buffer (planet-sized, reused each frame)
-  const sphereSize = isMobile ? 148 : 210;
-  const sphereCanvas = document.createElement("canvas");
-  sphereCanvas.width = sphereSize;
-  sphereCanvas.height = sphereSize;
-  const sphereCtx = sphereCanvas.getContext("2d")!;
-  sphereCtx.imageSmoothingEnabled = true;
-  sphereCtx.imageSmoothingQuality = "high";
+  // Planet canvas (inside orbit-core)
+  let planetCanvas: HTMLCanvasElement | null = null;
+  let planetCtx: CanvasRenderingContext2D | null = null;
+  let planetSize = 0;
 
-  // Pre-generate cloud wisps
-  type CloudWisp = { x: number; y: number; w: number; h: number; opacity: number; };
-  const cloudWisps: CloudWisp[] = [];
-  for (let i = 0; i < 36; i++) {
-    cloudWisps.push({
-      x: Math.random() * planetTexW,
-      y: 40 + Math.random() * (planetTexH - 80),
-      w: 50 + Math.random() * 160,
-      h: 10 + Math.random() * 22,
-      opacity: 0.15 + Math.random() * 0.25,
-    });
-  }
+  // Per-node ring assignment
+  const nodeRingAssignments: number[] = [];
+  let orbitAngles: number[] = [];
 
-  // Bake the planet ocean texture (called once + when logo loads)
-  let planetTextureReady = false;
-  const bakePlanetTexture = () => {
-    const ctx = planetTexCtx;
-    ctx.clearRect(0, 0, planetTexW, planetTexH);
+  // Spoke pulse data (animated dots traveling along spokes toward center)
+  type SpokePulse = { progress: number; speed: number; baseOpacity: number; };
+  const spokePulses: SpokePulse[][] = [];
 
-    // Deep ocean gradient (latitude bands)
-    const oceanGrad = ctx.createLinearGradient(0, 0, 0, planetTexH);
-    oceanGrad.addColorStop(0, "#061e36");
-    oceanGrad.addColorStop(0.12, "#0a2e52");
-    oceanGrad.addColorStop(0.3, "#124878");
-    oceanGrad.addColorStop(0.45, "#1a6498");
-    oceanGrad.addColorStop(0.55, "#1e72a8");
-    oceanGrad.addColorStop(0.7, "#124878");
-    oceanGrad.addColorStop(0.88, "#0a2e52");
-    oceanGrad.addColorStop(1, "#061e36");
-    ctx.fillStyle = oceanGrad;
-    ctx.fillRect(0, 0, planetTexW, planetTexH);
-
-    // Ocean shimmer / current streaks
-    ctx.globalAlpha = 1;
-    for (let i = 0; i < 22; i++) {
-      const sy = 30 + Math.random() * (planetTexH - 60);
-      const sw = 60 + Math.random() * 250;
-      const sx = Math.random() * planetTexW;
-      const streak = ctx.createLinearGradient(sx, sy, sx + sw, sy);
-      streak.addColorStop(0, "rgba(30, 120, 180, 0)");
-      streak.addColorStop(0.3, `rgba(50, 170, 220, ${0.08 + Math.random() * 0.08})`);
-      streak.addColorStop(0.7, `rgba(40, 150, 200, ${0.04 + Math.random() * 0.06})`);
-      streak.addColorStop(1, "rgba(30, 120, 180, 0)");
-      ctx.fillStyle = streak;
-      ctx.fillRect(sx, sy - 2 - Math.random() * 3, sw, 4 + Math.random() * 4);
-    }
-
-    // Subtle ocean noise texture (small bright dots)
-    ctx.globalAlpha = 0.04;
-    for (let i = 0; i < 300; i++) {
-      const nx = Math.random() * planetTexW;
-      const ny = Math.random() * planetTexH;
-      ctx.fillStyle = "#8ec8f0";
-      ctx.fillRect(nx, ny, 1, 1);
-    }
-    ctx.globalAlpha = 1;
-
-    // Stamp V logo as "continental landmass"
-    if (vLogoReady) {
-      ctx.save();
-      const logoAspect = vLogo.width / Math.max(vLogo.height, 1);
-      const logoH = planetTexH * 0.65;
-      const logoW = logoH * logoAspect;
-      const logoY = (planetTexH - logoH) / 2;
-
-      for (let copy = 0; copy < 2; copy++) {
-        const logoX = (planetTexW * 0.5 - logoW / 2) + copy * planetTexW;
-
-        // Soft shadow
-        ctx.globalAlpha = 0.2;
-        ctx.globalCompositeOperation = "multiply";
-        ctx.drawImage(vLogo, logoX + 3, logoY + 3, logoW, logoH);
-
-        // Main continent layer
-        ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = 0.55;
-        ctx.drawImage(vLogo, logoX, logoY, logoW, logoH);
-
-        // Warm earth tint overlay (draw on top, blended)
-        ctx.globalCompositeOperation = "source-over";
-        ctx.globalAlpha = 0.12;
-        const tintGrad = ctx.createLinearGradient(logoX, logoY, logoX, logoY + logoH);
-        tintGrad.addColorStop(0, "#a08040");
-        tintGrad.addColorStop(0.5, "#c8a050");
-        tintGrad.addColorStop(1, "#806830");
-        ctx.fillStyle = tintGrad;
-        ctx.fillRect(logoX, logoY, logoW, logoH);
+  const initSpokePulses = () => {
+    spokePulses.length = 0;
+    for (let i = 0; i < orbitNodes.length; i++) {
+      const pulses: SpokePulse[] = [];
+      const count = 2 + Math.floor(Math.random() * 2); // 2-3 pulses
+      for (let j = 0; j < count; j++) {
+        pulses.push({
+          progress: j / count, // staggered positions
+          speed: 0.25 + Math.random() * 0.12,
+          baseOpacity: 0.6 + Math.random() * 0.4,
+        });
       }
-      ctx.restore();
-    }
-    ctx.globalAlpha = 1;
-    planetTextureReady = true;
-  };
-
-  // Bake on logo load
-  vLogo.onload = () => {
-    vLogoReady = true;
-    bakePlanetTexture();
-  };
-  // Bake initial (no logo yet)
-  bakePlanetTexture();
-
-  const updateCloudTexture = (nowSeconds: number) => {
-    const ctx = cloudTexCtx;
-    ctx.clearRect(0, 0, planetTexW, planetTexH);
-
-    for (const wisp of cloudWisps) {
-      const wx = (wisp.x + nowSeconds * 10) % (planetTexW + wisp.w) - wisp.w * 0.5;
-      const wavey = wisp.y + Math.sin(nowSeconds * 0.25 + wisp.x * 0.015) * 5;
-      const grad = ctx.createRadialGradient(
-        wx + wisp.w * 0.5, wavey, 0,
-        wx + wisp.w * 0.5, wavey, wisp.w * 0.52
-      );
-      grad.addColorStop(0, `rgba(255, 255, 255, ${wisp.opacity})`);
-      grad.addColorStop(0.3, `rgba(245, 250, 255, ${wisp.opacity * 0.65})`);
-      grad.addColorStop(0.7, `rgba(230, 240, 250, ${wisp.opacity * 0.2})`);
-      grad.addColorStop(1, "rgba(255, 255, 255, 0)");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.ellipse(wx + wisp.w * 0.5, wavey, wisp.w * 0.5, wisp.h * 0.5, 0, 0, Math.PI * 2);
-      ctx.fill();
+      spokePulses.push(pulses);
     }
   };
 
-  // Render equirectangular texture onto sphere buffer
-  const renderSphereTexture = (nowSeconds: number) => {
-    const ctx = sphereCtx;
-    ctx.clearRect(0, 0, sphereSize, sphereSize);
+  // ── Goldberg Hex Globe system (dual of subdivided icosahedron) ──
+  type Vec3 = [number, number, number];
+  // Each hex/pent cell: array of corner positions on unit sphere + center position
+  type HexCell = { corners: Vec3[]; center: Vec3; };
+  let hexCells: HexCell[] = [];
 
-    const rotation = reduceMotion ? scrollProgress * Math.PI * 2 : nowSeconds * 0.12;
-    const texScrollPx = (rotation / (Math.PI * 2)) * planetTexW;
-    const cloudScrollPx = texScrollPx * 1.25; // Clouds drift faster
-    const srcW = 3; // Sample 3px wide strips for smooth interpolation
-    const destW = 2; // Draw 2px wide columns with overlap for seamless fill
+  const normalize3 = (v: Vec3): Vec3 => {
+    const len = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    return [v[0] / len, v[1] / len, v[2] / len];
+  };
 
-    for (let col = 0; col < sphereSize; col += destW) {
-      const xNorm = ((col + destW * 0.5) / sphereSize) * 2 - 1; // -1 to 1, centered
-      if (Math.abs(xNorm) > 0.995) continue;
+  const midpoint3 = (a: Vec3, b: Vec3): Vec3 =>
+    normalize3([(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5, (a[2] + b[2]) * 0.5]);
 
-      const lon = Math.asin(clamp(xNorm, -0.99, 0.99));
-      const cosLon = Math.cos(lon);
-      const colHeight = cosLon * sphereSize;
-      if (colHeight < 1) continue;
+  const generateHexGlobe = (subdivisions: number) => {
+    // ── Step 1: Build subdivided icosahedron (triangle mesh) ──
+    const phi = (1 + Math.sqrt(5)) / 2;
+    const baseVerts: Vec3[] = [
+      [-1,  phi,  0], [ 1,  phi,  0], [-1, -phi,  0], [ 1, -phi,  0],
+      [ 0, -1,  phi], [ 0,  1,  phi], [ 0, -1, -phi], [ 0,  1, -phi],
+      [ phi,  0, -1], [ phi,  0,  1], [-phi,  0, -1], [-phi,  0,  1],
+    ].map(v => normalize3(v as Vec3));
 
-      const destY = (sphereSize - colHeight) * 0.5;
+    let triFaces: [number, number, number][] = [
+      [0,11,5], [0,5,1], [0,1,7], [0,7,10], [0,10,11],
+      [1,5,9], [5,11,4], [11,10,2], [10,7,6], [7,1,8],
+      [3,9,4], [3,4,2], [3,2,6], [3,6,8], [3,8,9],
+      [4,9,5], [2,4,11], [6,2,10], [8,6,7], [9,8,1],
+    ];
 
-      // Map longitude to texture U coordinate
-      const texU = ((lon / Math.PI + 0.5) * planetTexW + texScrollPx) % planetTexW;
-      const srcX = ((Math.floor(texU) - 1) + planetTexW) % planetTexW;
+    let verts = [...baseVerts];
 
-      // Ocean + landmass (wider source strip for smooth interpolation)
-      ctx.drawImage(planetTexCanvas, srcX, 0, srcW, planetTexH, col, destY, destW, colHeight);
+    for (let s = 0; s < subdivisions; s++) {
+      const midCache = new Map<string, number>();
+      const getMid = (a: number, b: number): number => {
+        const key = a < b ? `${a}_${b}` : `${b}_${a}`;
+        if (midCache.has(key)) return midCache.get(key)!;
+        const mid = midpoint3(verts[a], verts[b]);
+        const idx = verts.length;
+        verts.push(mid);
+        midCache.set(key, idx);
+        return idx;
+      };
+      const newFaces: [number, number, number][] = [];
+      for (const [a, b, c] of triFaces) {
+        const ab = getMid(a, b);
+        const bc = getMid(b, c);
+        const ca = getMid(c, a);
+        newFaces.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]);
+      }
+      triFaces = newFaces;
+    }
 
-      // Cloud layer (different scroll speed, slightly transparent)
-      ctx.globalAlpha = 0.75;
-      const cloudU = ((lon / Math.PI + 0.5) * planetTexW + cloudScrollPx) % planetTexW;
-      const cloudSrcX = ((Math.floor(cloudU) - 1) + planetTexW) % planetTexW;
-      ctx.drawImage(cloudTexCanvas, cloudSrcX, 0, srcW, planetTexH, col, destY, destW, colHeight);
-      ctx.globalAlpha = 1;
+    // ── Step 2: Build dual mesh (Goldberg polyhedron) ──
+    // Each vertex of the triangle mesh becomes a hex/pent cell.
+    // The cell corners are the centroids of the triangles surrounding that vertex.
+
+    // Compute triangle centroids (projected onto unit sphere)
+    const triCentroids: Vec3[] = triFaces.map(([a, b, c]) =>
+      normalize3([
+        (verts[a][0] + verts[b][0] + verts[c][0]) / 3,
+        (verts[a][1] + verts[b][1] + verts[c][1]) / 3,
+        (verts[a][2] + verts[b][2] + verts[c][2]) / 3,
+      ])
+    );
+
+    // For each vertex, collect which triangles it belongs to
+    const vertToTris: number[][] = new Array(verts.length);
+    for (let i = 0; i < verts.length; i++) vertToTris[i] = [];
+    for (let fi = 0; fi < triFaces.length; fi++) {
+      for (const vi of triFaces[fi]) {
+        vertToTris[vi].push(fi);
+      }
+    }
+
+    // For each vertex, sort its surrounding triangles in angular order
+    // to form a proper polygon (hex or pent)
+    const cells: HexCell[] = [];
+    for (let vi = 0; vi < verts.length; vi++) {
+      const adjTris = vertToTris[vi];
+      if (adjTris.length < 5) continue; // skip degenerate
+
+      const center = verts[vi];
+      const corners = adjTris.map(fi => triCentroids[fi]);
+
+      // Sort corners by angle around the vertex normal (center)
+      // Use a local tangent frame
+      const n = center;
+      // Pick arbitrary tangent not parallel to n
+      const arbRef: Vec3 = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+      // tangentU = normalize(arbRef - (arbRef·n)n)
+      const dot = arbRef[0] * n[0] + arbRef[1] * n[1] + arbRef[2] * n[2];
+      const tu: Vec3 = normalize3([
+        arbRef[0] - dot * n[0],
+        arbRef[1] - dot * n[1],
+        arbRef[2] - dot * n[2],
+      ]);
+      // tangentV = n × tu
+      const tv: Vec3 = [
+        n[1] * tu[2] - n[2] * tu[1],
+        n[2] * tu[0] - n[0] * tu[2],
+        n[0] * tu[1] - n[1] * tu[0],
+      ];
+
+      corners.sort((a, b) => {
+        const da = [a[0] - center[0], a[1] - center[1], a[2] - center[2]];
+        const db = [b[0] - center[0], b[1] - center[1], b[2] - center[2]];
+        const angA = Math.atan2(
+          da[0] * tv[0] + da[1] * tv[1] + da[2] * tv[2],
+          da[0] * tu[0] + da[1] * tu[1] + da[2] * tu[2],
+        );
+        const angB = Math.atan2(
+          db[0] * tv[0] + db[1] * tv[1] + db[2] * tv[2],
+          db[0] * tu[0] + db[1] * tu[1] + db[2] * tu[2],
+        );
+        return angA - angB;
+      });
+
+      cells.push({ corners, center });
+    }
+
+    hexCells = cells;
+  };
+
+  // ── Energy Core Particle System ──
+  type CoreParticle = {
+    // 3D position in unit sphere space (-1 to 1)
+    x: number; y: number; z: number;
+    // Velocity
+    vx: number; vy: number; vz: number;
+    // Visual
+    size: number;
+    brightness: number;
+    hue: number;       // 0 = blue, 1 = cyan, 2 = white
+    life: number;      // 0-1 lifecycle
+    maxLife: number;
+    layer: number;     // 0 = inner vortex, 1 = mid swirl, 2 = outer drift
+  };
+
+  const CORE_PARTICLE_COUNT = isMobile ? 180 : 400;
+  const coreParticles: CoreParticle[] = [];
+
+  const initCoreParticle = (p: CoreParticle, respawn: boolean) => {
+    const layer = respawn ? p.layer : Math.floor(Math.random() * 3);
+    p.layer = layer;
+    p.life = respawn ? 0 : Math.random();
+    p.maxLife = 0.6 + Math.random() * 0.8;
+
+    if (layer === 0) {
+      // Inner vortex — tight spiral near center
+      const a = Math.random() * Math.PI * 2;
+      const spread = 0.05 + Math.random() * 0.2;
+      p.x = Math.cos(a) * spread;
+      p.y = (Math.random() - 0.5) * 0.3;
+      p.z = Math.sin(a) * spread;
+      p.size = 0.8 + Math.random() * 1.5;
+      p.brightness = 0.7 + Math.random() * 0.3;
+      p.hue = Math.random() < 0.3 ? 2 : 0; // mostly white hot
+    } else if (layer === 1) {
+      // Mid swirl — wider orbit
+      const a = Math.random() * Math.PI * 2;
+      const spread = 0.2 + Math.random() * 0.35;
+      p.x = Math.cos(a) * spread;
+      p.y = (Math.random() - 0.5) * 0.5;
+      p.z = Math.sin(a) * spread;
+      p.size = 0.5 + Math.random() * 1.2;
+      p.brightness = 0.5 + Math.random() * 0.4;
+      p.hue = Math.random() < 0.5 ? 1 : 0; // cyan or blue
+    } else {
+      // Outer drift — slow floating particles near sphere edge
+      const a = Math.random() * Math.PI * 2;
+      const elev = (Math.random() - 0.5) * Math.PI;
+      const spread = 0.4 + Math.random() * 0.45;
+      p.x = Math.cos(a) * Math.cos(elev) * spread;
+      p.y = Math.sin(elev) * spread;
+      p.z = Math.sin(a) * Math.cos(elev) * spread;
+      p.size = 0.3 + Math.random() * 0.8;
+      p.brightness = 0.3 + Math.random() * 0.3;
+      p.hue = 0; // deep blue
+    }
+
+    // Velocity: orbital motion + slight upward drift
+    const speed = layer === 0 ? 0.015 : layer === 1 ? 0.008 : 0.003;
+    p.vx = -p.z * speed + (Math.random() - 0.5) * 0.002;
+    p.vy = (Math.random() - 0.5) * 0.003 + 0.001; // slight upward
+    p.vz = p.x * speed + (Math.random() - 0.5) * 0.002;
+  };
+
+  const initEnergyCoreParticles = () => {
+    coreParticles.length = 0;
+    for (let i = 0; i < CORE_PARTICLE_COUNT; i++) {
+      const p: CoreParticle = {
+        x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
+        size: 1, brightness: 1, hue: 0, life: 0, maxLife: 1, layer: 0,
+      };
+      initCoreParticle(p, false);
+      coreParticles.push(p);
     }
   };
 
@@ -489,40 +584,279 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     short: node.dataset.short ?? "",
   }));
 
-  // Ring particle system
-  const ringParticleCount = lowPowerDevice ? (isMobile ? 12 : 24) : (isMobile ? 24 : 48);
-  const ringParticles: RingParticle[] = Array.from({ length: ringParticleCount }, () => ({
-    ring: Math.floor(Math.random() * 4) + 1,
-    angle: Math.random() * Math.PI * 2,
-    speed: (0.15 + Math.random() * 0.25) * (Math.random() > 0.5 ? 1 : -1),
-    size: 0.8 + Math.random() * 1.2,
-    brightness: 0.4 + Math.random() * 0.6,
-    tailLength: 3 + Math.floor(Math.random() * 5),
-  }));
+  // ── SVG creation + Ring assignment ──
 
-  const orbitAngles = orbitNodes.map((_, index) => (index / Math.max(orbitNodes.length, 1)) * Math.PI * 2 - Math.PI / 2);
+  const createOrbitSVG = () => {
+    if (!orbitMenu) return;
+    svgEl = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgEl.classList.add("orbit-rings-svg");
+    svgEl.setAttribute("aria-hidden", "true");
 
-  const setSlides = (progress: number) => {
-    const clamped = clamp(progress, 0, 0.999);
-    const scaled = clamped * slides.length;
-    const activeIndex = Math.floor(scaled);
+    // Spoke lines (node → center)
+    for (let i = 0; i < orbitNodes.length; i++) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.classList.add("orbit-spoke");
+      svgEl.appendChild(line);
+      spokeLines.push(line);
+    }
 
-    slides.forEach((slide, index) => {
-      slide.classList.toggle("is-active", index === activeIndex);
+    // Pulse dots + comet trails traveling along spokes (3 per spoke)
+    // Create a <defs> block for trail gradients
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    svgEl.appendChild(defs);
+
+    for (let i = 0; i < orbitNodes.length; i++) {
+      const circles: SVGCircleElement[] = [];
+      const trails: SVGLineElement[] = [];
+      const grads: SVGLinearGradientElement[] = [];
+      for (let j = 0; j < 3; j++) {
+        // Trail gradient (unique per dot so we can update colors)
+        const gradId = `trail-grad-${i}-${j}`;
+        const grad = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+        grad.id = gradId;
+        grad.setAttribute("gradientUnits", "userSpaceOnUse");
+        const stop0 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop0.setAttribute("offset", "0%");
+        stop0.setAttribute("stop-color", "#ffffff");
+        stop0.setAttribute("stop-opacity", "0");
+        const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop1.setAttribute("offset", "100%");
+        stop1.setAttribute("stop-color", "#ffffff");
+        stop1.setAttribute("stop-opacity", "0.8");
+        grad.appendChild(stop0);
+        grad.appendChild(stop1);
+        defs.appendChild(grad);
+        grads.push(grad);
+
+        // Trail line
+        const trail = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        trail.classList.add("orbit-spoke-trail");
+        trail.setAttribute("stroke", `url(#${gradId})`);
+        trail.setAttribute("stroke-width", "2");
+        trail.setAttribute("stroke-linecap", "round");
+        trail.style.opacity = "0";
+        svgEl.appendChild(trail);
+        trails.push(trail);
+
+        // Bright head dot
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.classList.add("orbit-spoke-pulse");
+        circle.setAttribute("r", "2.5");
+        circle.style.opacity = "0";
+        svgEl.appendChild(circle);
+        circles.push(circle);
+      }
+      spokePulseCircles.push(circles);
+      spokePulseTrails.push(trails);
+      spokePulseGrads.push(grads);
+    }
+
+    orbitMenu.insertBefore(svgEl, orbitMenu.firstChild);
+  };
+
+  const assignNodesToRings = () => {
+    nodeRingAssignments.length = 0;
+    orbitNodes.forEach(node => {
+      const ringAttr = node.dataset.ring;
+      nodeRingAssignments.push(ringAttr ? parseInt(ringAttr, 10) - 1 : 1);
+    });
+
+    // Compute per-ring angle distributions
+    const ringBuckets: number[][] = config.orbit.rings.map(() => []);
+    orbitNodes.forEach((_, i) => {
+      ringBuckets[nodeRingAssignments[i]].push(i);
+    });
+
+    // Per-ring even spacing
+    orbitAngles = new Array(orbitNodes.length);
+    ringBuckets.forEach((bucket) => {
+      bucket.forEach((nodeIdx, posInRing) => {
+        orbitAngles[nodeIdx] = (posInRing / Math.max(bucket.length, 1)) * Math.PI * 2 - Math.PI / 2;
+      });
     });
   };
 
-  const updateSlideTrackLayout = () => {
-    if (!slideTrack || !headline) return;
-    // Vertical: match headline top so titles swap in place
-    // Horizontal: match heroIntro container so slide titles share the
-    // same left edge and width as the main headline's parent
-    const headlineRect = headline.getBoundingClientRect();
-    const introEl = document.getElementById("heroIntro");
-    const containerRect = introEl ? introEl.getBoundingClientRect() : headlineRect;
-    slideTrack.style.left = `${containerRect.left}px`;
-    slideTrack.style.top = `${headlineRect.top}px`;
-    slideTrack.style.width = `${containerRect.width}px`;
+  /** Effective time that excludes paused intervals */
+  const getOrbitTime = (nowSeconds: number): number => {
+    if (orbitPaused) return nowSeconds - pauseTimeOffset - (nowSeconds - pauseStartTime);
+    return nowSeconds - pauseTimeOffset;
+  };
+
+  const computeBaseSpin = (nowSeconds: number, speedMultiplier: number): number => {
+    const t = getOrbitTime(nowSeconds);
+    const baseRate = reduceMotion ? 0 : t * 0.17 * speedMultiplier;
+    return baseRate + scrollProgress * Math.PI * 0.55 * speedMultiplier + touchSpinOffset * speedMultiplier;
+  };
+
+  /** Orbit radius that adapts to viewport on mobile so nodes never overflow */
+  const getOrbitRadius = (): number => {
+    if (!isMobile) return config.orbit.radiusDesktop;
+    return Math.min(config.orbit.radiusMobile, Math.min(width, height) * 0.34);
+  };
+
+  /** Compute tilted 2D position for an orbit node (shared by spokes, pulses, nodes) */
+  const getTiltedNodePos = (
+    angle: number, radius: number, ratio: number,
+    cx: number, cy: number,
+  ): { x: number; y: number; depth: number } => {
+    const ox = Math.cos(angle) * radius;
+    const oy = Math.sin(angle) * radius * 0.3;
+    const oz = Math.sin(angle) * radius * ratio;
+    const cosTilt = Math.cos(touchTiltOffset);
+    const sinTilt = Math.sin(touchTiltOffset);
+    const tiltedY = oy * cosTilt - oz * sinTilt;
+    const tiltedZ = oy * sinTilt + oz * cosTilt;
+    return {
+      x: cx + ox + mouseX * (isMobile ? 4 : 14),
+      y: cy + tiltedZ + mouseY * (isMobile ? 3 : 10),
+      depth: clamp((tiltedY / radius + 1) * 0.5, 0, 1),
+    };
+  };
+
+  const initPlanetCanvas = () => {
+    planetCanvas = document.getElementById("orbitPlanetCanvas") as HTMLCanvasElement | null;
+    if (!planetCanvas || !orbitCore) return;
+
+    const rect = orbitCore.getBoundingClientRect();
+    planetSize = Math.round(Math.max(rect.width, rect.height));
+    const pxSize = Math.round(planetSize * dpr);
+    planetCanvas.width = pxSize;
+    planetCanvas.height = pxSize;
+    planetCtx = planetCanvas.getContext("2d");
+    if (planetCtx) {
+      planetCtx.imageSmoothingEnabled = true;
+      planetCtx.imageSmoothingQuality = "high";
+    }
+  };
+
+  /**
+   * Title fly-through — ONE STRAIGHT LINE, same as the stars.
+   *
+   * Picture a highway billboard. You see it tiny in the distance (center of
+   * screen / vanishing point). It gets closer and bigger as you approach it.
+   * It sits beside you (reading position). Then it continues PAST you on
+   * the SAME side of the road, getting huge and fading — it never crosses
+   * in front of you.
+   *
+   * All motion is on a SINGLE 290° compass line (0°=N, 90°=E, 270°=W):
+   *   290° ≈ WNW — left and slightly up
+   *   math angle: 90° - 290° = -200° → +160°
+   *   dx = cos(160°) ≈ -0.940 (strong left)
+   *   dy = -sin(160°) ≈ -0.342 (slightly up)
+   *
+   * The reading position (translate 0,0) is a STOP on this line.
+   *
+   * FLY-IN:  title is BEHIND reading pos on the line (toward vanishing pt)
+   *          = positive offset (opposite of travel direction)
+   *          It moves ALONG the line toward reading position.
+   *
+   * FLY-OUT: title continues PAST reading pos on the SAME line
+   *          = negative offset (same direction as travel)
+   *          It keeps moving along the line, getting bigger.
+   */
+
+  // 290° compass → math angle
+  const LINE_RAD = (90 - 290) * (Math.PI / 180); // = 160° in math coords
+  const LINE_DX = Math.cos(LINE_RAD);   // ≈ -0.940 (left)
+  const LINE_DY = -Math.sin(LINE_RAD);  // ≈ -0.342 (up) [negate for screen Y]
+
+  // How far along the line (in px) for entry/exit from reading position
+  const getLineDist = () => ({
+    entry: Math.max(width * 0.42, 200), // distance FROM vanishing pt TO reading pos
+    exit:  Math.max(width * 0.32, 220), // distance FROM reading pos onward past camera
+  });
+
+  const updateSlidesFlyThrough = (progress: number) => {
+    const clamped = clamp(progress, 0, 0.999);
+    const scaled = clamped * slides.length;
+    const activeIndex = Math.floor(scaled);
+    const t = scaled - activeIndex;
+    const dist = getLineDist();
+
+    // Entry offset: OPPOSITE of travel direction (back toward vanishing pt)
+    const entryTx = -LINE_DX * dist.entry; // positive X (rightward, toward center)
+    const entryTy = -LINE_DY * dist.entry; // positive Y (slightly down)
+
+    // Exit offset: SAME as travel direction (past reading pos)
+    const exitTx = LINE_DX * dist.exit;    // negative X (leftward)
+    const exitTy = LINE_DY * dist.exit;    // negative Y (slightly up)
+
+    slides.forEach((slide, index) => {
+      const isHero = index === 0;
+
+      if (index === activeIndex) {
+        slide.classList.add("is-active");
+
+        const flyInEnd = 0.15;
+        const holdEnd = 0.75;
+        let opacity: number;
+        let tx: number;
+        let ty: number;
+        let scale: number;
+
+        if (isHero) {
+          // ── SLIDE 0: Hard visible on load. Only flies OUT. ──
+          if (t < holdEnd) {
+            opacity = 1;
+            tx = 0;
+            ty = 0;
+            scale = 1;
+          } else {
+            // Continue along the SAME 290° line past reading position
+            const ft = (t - holdEnd) / (1.0 - holdEnd);
+            const eased = ft * ft * (3 - 2 * ft);
+            opacity = clamp(1 - ft * 2.5, 0, 1);
+            tx = exitTx * eased;
+            ty = exitTy * eased;
+            scale = lerp(1.0, 3.5, eased);
+          }
+        } else {
+          // ── SLIDES 1-3: Fly in along line → hold → fly out along SAME line ──
+          const isLastSlide = index === slides.length - 1;
+
+          if (t < flyInEnd) {
+            // FLY-IN: starts at vanishing point (behind on the line), tiny
+            // Travels along 290° line toward reading position
+            const at = t / flyInEnd;
+            const eased = at * (2 - at); // ease-out: fast approach, soft landing
+            opacity = clamp(eased * 1.4, 0, 1);
+            scale = lerp(0.25, 1.0, eased);
+            // Interpolate from entry offset → reading pos (0,0)
+            tx = lerp(entryTx, 0, eased);
+            ty = lerp(entryTy, 0, eased);
+          } else if (t < holdEnd || isLastSlide) {
+            // HOLD: at reading position, fully readable.
+            // The LAST slide stays in hold permanently — introOpacity
+            // fades the entire panel so no separate fly-out is needed.
+            opacity = 1;
+            tx = 0;
+            ty = 0;
+            scale = 1;
+          } else {
+            // FLY-OUT: continues SAME direction past reading pos
+            const ft = (t - holdEnd) / (1.0 - holdEnd);
+            const eased = ft * ft * (3 - 2 * ft);
+            opacity = clamp(1 - ft * 2.5, 0, 1);
+            tx = exitTx * eased;
+            ty = exitTy * eased;
+            scale = lerp(1.0, 3.5, eased);
+          }
+        }
+
+        slide.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${scale.toFixed(3)})`;
+        slide.style.opacity = `${opacity.toFixed(3)}`;
+      } else {
+        slide.classList.remove("is-active");
+        slide.style.opacity = "0";
+        if (index < activeIndex) {
+          // Already flown past — parked at exit end of line
+          slide.style.transform = `translate(${exitTx.toFixed(1)}px, ${exitTy.toFixed(1)}px) scale(3.5)`;
+        } else {
+          // Not yet visible — parked at entry end of line (vanishing pt)
+          slide.style.transform = `translate(${entryTx.toFixed(1)}px, ${entryTy.toFixed(1)}px) scale(0.25)`;
+        }
+      }
+    });
   };
 
   const applySequenceHeight = () => {
@@ -549,7 +883,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     rebuildStars();
-    updateSlideTrackLayout();
+    initPlanetCanvas();
   };
 
   const drawAtmosphere = (themeA: StageTheme, themeB: StageTheme, mix: number) => {
@@ -590,145 +924,173 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     context.fillRect(0, 0, width, height);
   };
 
-  const drawOrbitRings = (nowSeconds: number, orbitReveal: number, delta: number) => {
-    if (orbitReveal <= 0.02) return;
-
-    const centerX = width * 0.5;
-    const centerY = height * 0.52;
-    const radius = (isMobile ? config.orbit.radiusMobile : config.orbit.radiusDesktop) * (0.72 + orbitReveal * 0.32);
-    const tiltX = mouseX * 0.04;
-    const tiltY = mouseY * 0.03;
-    const breathe = 0.85 + Math.sin(nowSeconds * 0.7) * 0.15;
-
-    context.save();
-
-    // Draw rings with depth variation
-    for (let ring = 1; ring <= 4; ring++) {
-      const ringRadius = radius * (0.52 + ring * 0.2);
-      const depthFactor = 0.4 + (ring / 4) * 0.6;
-      const ringAlpha = (0.07 + orbitReveal * 0.14) * depthFactor * breathe;
-      const parallaxScale = 0.5 + (ring / 4) * 0.5;
-      const offsetX = tiltX * ringRadius * parallaxScale * 0.5;
-      const offsetY = tiltY * ringRadius * parallaxScale * 0.3;
-
-      context.strokeStyle = `rgba(188, 206, 235, ${ringAlpha})`;
-      context.lineWidth = 0.6 + ring * 0.15;
-      context.beginPath();
-      context.ellipse(centerX + offsetX, centerY + offsetY, ringRadius, ringRadius * 0.6, 0, 0, Math.PI * 2);
-      context.stroke();
+  const updateOrbitSVG = (_nowSeconds: number, orbitReveal: number) => {
+    if (!svgEl || !orbitMenu) return;
+    if (orbitReveal <= 0.02) {
+      svgEl.style.opacity = "0";
+      return;
     }
-
-    // Ring particles
-    if (!reduceMotion) {
-      for (const particle of ringParticles) {
-        particle.angle += particle.speed * delta * 0.016;
-
-        const ringRadius = radius * (0.52 + particle.ring * 0.2);
-        const parallaxScale = 0.5 + (particle.ring / 4) * 0.5;
-        const offsetX = tiltX * ringRadius * parallaxScale * 0.5;
-        const offsetY = tiltY * ringRadius * parallaxScale * 0.3;
-
-        const px = centerX + offsetX + Math.cos(particle.angle) * ringRadius;
-        const py = centerY + offsetY + Math.sin(particle.angle) * ringRadius * 0.6;
-        const depthMix = (Math.sin(particle.angle) + 1) * 0.5;
-        const particleAlpha = orbitReveal * particle.brightness * (0.3 + depthMix * 0.7) * breathe;
-
-        // Glow tail
-        for (let t = particle.tailLength; t >= 0; t--) {
-          const tailAngle = particle.angle - (particle.speed > 0 ? 1 : -1) * t * 0.03;
-          const tx = centerX + offsetX + Math.cos(tailAngle) * ringRadius;
-          const ty = centerY + offsetY + Math.sin(tailAngle) * ringRadius * 0.6;
-          const tailAlpha = particleAlpha * (1 - t / (particle.tailLength + 1)) * 0.5;
-          const tailSize = particle.size * (1 - t * 0.08);
-
-          context.fillStyle = `rgba(160, 200, 255, ${tailAlpha})`;
-          context.beginPath();
-          context.arc(tx, ty, Math.max(tailSize, 0.3), 0, Math.PI * 2);
-          context.fill();
-        }
-
-        // Particle head
-        context.fillStyle = `rgba(200, 225, 255, ${particleAlpha})`;
-        context.beginPath();
-        context.arc(px, py, particle.size, 0, Math.PI * 2);
-        context.fill();
-
-        // Tiny glow
-        if (particle.size > 1) {
-          const glowGrad = context.createRadialGradient(px, py, 0, px, py, particle.size * 3);
-          glowGrad.addColorStop(0, `rgba(160, 200, 255, ${particleAlpha * 0.25})`);
-          glowGrad.addColorStop(1, "rgba(160, 200, 255, 0)");
-          context.fillStyle = glowGrad;
-          context.beginPath();
-          context.arc(px, py, particle.size * 3, 0, Math.PI * 2);
-          context.fill();
-        }
-      }
-    }
-
-    context.restore();
+    svgEl.style.opacity = `${clamp(orbitReveal * 1.2, 0, 1)}`;
+    const containerRect = orbitMenu.getBoundingClientRect();
+    svgEl.setAttribute("viewBox", `0 0 ${containerRect.width} ${containerRect.height}`);
   };
 
-  const drawSpokes = (nowSeconds: number, orbitReveal: number) => {
-    if (orbitReveal <= 0.3) return;
+  const updateSpokeSVG = (nowSeconds: number, orbitReveal: number) => {
+    if (!orbitMenu) return;
 
-    const cx = width * 0.5;
-    const cy = height * 0.52;
-    const radius = (isMobile ? config.orbit.radiusMobile : config.orbit.radiusDesktop) * (0.9 + orbitReveal * 0.24);
-    const ellipseRatio = isMobile ? 0.66 : 0.58;
+    if (orbitReveal <= 0.3) {
+      spokeLines.forEach(line => { line.style.opacity = "0"; });
+      return;
+    }
 
-    touchSpinVelocity *= 0.95;
-    if (Math.abs(touchSpinVelocity) > 0.0001) touchSpinOffset += touchSpinVelocity;
-
-    const baseSpin = reduceMotion
-      ? scrollProgress * Math.PI * 0.58 + touchSpinOffset
-      : nowSeconds * 0.17 + scrollProgress * Math.PI * 0.55 + touchSpinOffset;
-    const spokeAlpha = clamp((orbitReveal - 0.3) * 2, 0, 0.25);
-
-    context.save();
-    context.lineWidth = 0.5;
+    const containerRect = orbitMenu.getBoundingClientRect();
+    const cx = containerRect.width * 0.5;
+    const cy = containerRect.height * 0.5;
+    const baseRadius = getOrbitRadius() * (0.9 + orbitReveal * 0.24);
+    const spokeAlpha = clamp((orbitReveal - 0.3) * 2, 0, 0.10);
 
     orbitNodes.forEach((_, index) => {
-      const angle = orbitAngles[index] + baseSpin;
-      const x = cx + Math.cos(angle) * radius + mouseX * 14;
-      const y = cy + Math.sin(angle) * radius * ellipseRatio + mouseY * 10;
-      const depthMix = (Math.sin(angle) + 1) * 0.5;
-      const { rgb } = nodeAccents[index];
+      const line = spokeLines[index];
+      if (!line) return;
 
-      const grad = context.createLinearGradient(cx, cy, x, y);
-      grad.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`);
-      grad.addColorStop(0.4, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${spokeAlpha * depthMix})`);
-      grad.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${spokeAlpha * depthMix * 0.6})`);
+      const ringIdx = nodeRingAssignments[index];
+      const ringCfg = config.orbit.rings[ringIdx];
+      const radius = baseRadius * ringCfg.radiusFactor;
+      const ratio = isMobile ? ringCfg.ellipseRatioMobile : ringCfg.ellipseRatio;
 
-      context.strokeStyle = grad;
-      context.beginPath();
-      context.moveTo(cx, cy);
-      context.lineTo(x, y);
-      context.stroke();
+      const baseSpin = computeBaseSpin(nowSeconds, ringCfg.speedMultiplier);
+      const angle = orbitAngles[index] + baseSpin + ringCfg.tiltOffset;
+
+      const pos = getTiltedNodePos(angle, radius, ratio, cx, cy);
+      const { accent } = nodeAccents[index];
+
+      line.setAttribute("x1", `${cx}`);
+      line.setAttribute("y1", `${cy}`);
+      line.setAttribute("x2", `${pos.x}`);
+      line.setAttribute("y2", `${pos.y}`);
+      line.style.stroke = accent;
+      line.style.opacity = `${spokeAlpha * pos.depth}`;
     });
-
-    context.restore();
   };
 
-  const drawPlanet = (nowSeconds: number, orbitReveal: number) => {
-    if (orbitReveal <= 0.02) return;
+  // ── Spoke pulse dots: travel from node → center ──
+  const updateSpokePulses = (nowSeconds: number, delta: number, orbitReveal: number) => {
+    if (!orbitMenu || orbitReveal <= 0.3) {
+      spokePulseCircles.forEach(circles =>
+        circles.forEach(c => { c.style.opacity = "0"; })
+      );
+      spokePulseTrails.forEach(trails =>
+        trails.forEach(t => { t.style.opacity = "0"; })
+      );
+      return;
+    }
+
+    const containerRect = orbitMenu.getBoundingClientRect();
+    const cx = containerRect.width * 0.5;
+    const cy = containerRect.height * 0.5;
+    const baseRadius = getOrbitRadius() * (0.9 + orbitReveal * 0.24);
+
+    orbitNodes.forEach((_, index) => {
+      const ringIdx = nodeRingAssignments[index];
+      const ringCfg = config.orbit.rings[ringIdx];
+      const radius = baseRadius * ringCfg.radiusFactor;
+      const ratio = isMobile ? ringCfg.ellipseRatioMobile : ringCfg.ellipseRatio;
+      const baseSpin = computeBaseSpin(nowSeconds, ringCfg.speedMultiplier);
+      const angle = orbitAngles[index] + baseSpin + ringCfg.tiltOffset;
+
+      const pos = getTiltedNodePos(angle, radius, ratio, cx, cy);
+      const { accent } = nodeAccents[index];
+
+      const pulses = spokePulses[index];
+      const circles = spokePulseCircles[index];
+      const trails = spokePulseTrails[index];
+      const grads = spokePulseGrads[index];
+      if (!pulses || !circles) return;
+
+      // Globe occlusion radius for pulse dots
+      const globeR = planetSize * 0.45;
+      // Trail length as fraction of spoke (how far back the tail extends)
+      const trailFrac = 0.12;
+
+      pulses.forEach((pulse, j) => {
+        // Advance progress: 0 = at center (globe), 1 = at node
+        pulse.progress += pulse.speed * delta * 0.016;
+        if (pulse.progress >= 1) pulse.progress -= 1;
+
+        const t = pulse.progress;
+        const px = cx + (pos.x - cx) * t;
+        const py = cy + (pos.y - cy) * t;
+
+        // Trail tail position (behind the dot along the spoke)
+        const tTail = Math.max(0, t - trailFrac);
+        const tailX = cx + (pos.x - cx) * tTail;
+        const tailY = cy + (pos.y - cy) * tTail;
+
+        // Fade: brightest in middle of travel, dim near endpoints
+        const fadeIn = smoothstep(0, 0.12, t);
+        const fadeOut = 1 - smoothstep(0.82, 1, t);
+        let alpha = fadeIn * fadeOut * pulse.baseOpacity
+          * clamp((orbitReveal - 0.3) * 3, 0, 1);
+
+        // Occlude pulse dots ONLY when physically behind AND overlapping the globe disc
+        const pdx = px - cx, pdy = py - cy;
+        const pDist = Math.sqrt(pdx * pdx + pdy * pdy);
+        if (pos.depth < 0.45 && pDist < globeR) {
+          const behind = clamp((0.45 - pos.depth) / 0.4, 0, 1);
+          const overlap = clamp(1 - pDist / globeR, 0, 1);
+          alpha *= clamp(1 - behind * overlap * 0.80, 0.05, 1);
+        }
+
+        // Update trail line + gradient
+        const trail = trails?.[j];
+        const grad = grads?.[j];
+        if (trail && grad) {
+          trail.setAttribute("x1", `${tailX}`);
+          trail.setAttribute("y1", `${tailY}`);
+          trail.setAttribute("x2", `${px}`);
+          trail.setAttribute("y2", `${py}`);
+          trail.style.opacity = `${alpha * 0.7}`;
+          // Update gradient direction to follow the spoke
+          grad.setAttribute("x1", `${tailX}`);
+          grad.setAttribute("y1", `${tailY}`);
+          grad.setAttribute("x2", `${px}`);
+          grad.setAttribute("y2", `${py}`);
+          // Set gradient stops to node accent color
+          const stops = grad.querySelectorAll("stop");
+          if (stops[0]) stops[0].setAttribute("stop-color", accent);
+          if (stops[1]) stops[1].setAttribute("stop-color", accent);
+        }
+
+        const circle = circles[j];
+        if (circle) {
+          circle.setAttribute("cx", `${px}`);
+          circle.setAttribute("cy", `${py}`);
+          circle.style.opacity = `${alpha}`;
+          circle.style.fill = accent;
+        }
+      });
+    });
+  };
+
+  // ── Planet glow: ambient atmosphere on main canvas (stays fixed) ──
+  const drawPlanetGlow = (orbitReveal: number, nowSeconds: number, fadeMul: number) => {
+    if (orbitReveal <= 0.02 || fadeMul <= 0) return;
 
     const cx = width * 0.5;
     const cy = height * 0.52;
     const baseR = isMobile ? 62 : 90;
     const planetRadius = baseR * (0.85 + orbitReveal * 0.2);
-    const planetAlpha = clamp(orbitReveal * 1.4, 0, 1);
+    const planetAlpha = clamp(orbitReveal * 1.4, 0, 1) * fadeMul;
     const glowPulse = reduceMotion ? 0.65 : 0.5 + Math.sin(nowSeconds * 1.8) * 0.3;
-    const diameter = planetRadius * 2;
 
     context.save();
     context.globalAlpha = planetAlpha;
 
-    // ── Outer atmosphere glow (3 layers for rich blue haze) ──
     const glowLayers = [
-      { scale: 2.4, alpha: 0.035, color: "50, 130, 255" },
-      { scale: 1.75, alpha: 0.07, color: "65, 150, 255" },
-      { scale: 1.38, alpha: 0.13, color: "80, 170, 255" },
+      { scale: 2.8, alpha: 0.02, color: "40, 110, 230" },
+      { scale: 2.1, alpha: 0.04, color: "50, 130, 255" },
+      { scale: 1.6, alpha: 0.08, color: "65, 155, 255" },
+      { scale: 1.3, alpha: 0.15, color: "85, 175, 255" },
     ];
     for (const layer of glowLayers) {
       const gr = planetRadius * (layer.scale + glowPulse * 0.06);
@@ -740,93 +1102,325 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       context.fillRect(cx - gr, cy - gr, gr * 2, gr * 2);
     }
 
-    // ── Render sphere texture into offscreen buffer ──
-    if (planetTextureReady) {
-      renderSphereTexture(nowSeconds);
+    context.restore();
+  };
 
-      // Draw the sphere buffer onto the main canvas, scaled to planet size
-      context.drawImage(
-        sphereCanvas,
-        0, 0, sphereSize, sphereSize,
-        cx - planetRadius, cy - planetRadius, diameter, diameter
-      );
+  // ── Planet sphere: renders onto inline planetCanvas (scrolls with DOM) ──
+  // ── Wireframe Hex Globe renderer (replaces textured planet) ──
+  // Breathing scale — smoothly oscillates between 80% and 105%
+  let globeBreathTarget = 1.0;     // target scale
+  let globeBreathCurrent = 1.0;    // smoothed current scale
+  // Mouse-over-globe detection for proximity highlight
+  let globeMouseNx = 0;  // normalized mouse direction on globe surface (3D)
+  let globeMouseNy = 0;
+  let globeMouseNz = 0;
+  let globeMouseProximity = 0;  // 0..1, how close cursor is to globe center
+
+  const drawHexGlobe = (nowSeconds: number, orbitReveal: number) => {
+    if (!planetCtx || !planetCanvas || orbitReveal <= 0.02) return;
+
+    const s = planetSize;
+    const r = s * 0.5;
+    // Match orbit base spin using paused-aware time
+    // Negate to sync visual direction (globe surface moves WITH orbit nodes)
+    const orbitT = getOrbitTime(nowSeconds);
+    const rotY = -((reduceMotion ? scrollProgress * Math.PI * 2 : orbitT * 0.17)
+      + scrollProgress * Math.PI * 0.55 + touchSpinOffset);
+    const tiltX = 0.3 + touchTiltOffset; // base axial tilt + drag tilt
+    const cosRY = Math.cos(rotY), sinRY = Math.sin(rotY);
+    const cosTX = Math.cos(tiltX), sinTX = Math.sin(tiltX);
+
+    // ── Breathing pulse: 80% ↔ 105% ──
+    // Multi-layered sine for organic feel
+    const breathA = Math.sin(nowSeconds * 0.8) * 0.5 + 0.5;   // slow primary
+    const breathB = Math.sin(nowSeconds * 1.9) * 0.5 + 0.5;    // faster secondary
+    const breathMix = breathA * 0.75 + breathB * 0.25;          // weighted blend
+    globeBreathTarget = 0.80 + breathMix * 0.25;                // 0.80 → 1.05
+    // Smooth damp toward target (prevents pops)
+    globeBreathCurrent += (globeBreathTarget - globeBreathCurrent) * 0.08;
+    const breathScale = globeBreathCurrent;
+
+    // ── Mouse proximity to globe surface (for hex highlight) ──
+    // Forward projection is:
+    //   rx = cx*cosRY + cy*sinRY           (screen X component)
+    //   ry = -cx*sinRY + cy*cosRY          (intermediate)
+    //   fz = ry*sinTX + cz*cosTX           (screen Y component, negated)
+    //   fy = ry*cosTX - cz*sinTX           (depth / view direction)
+    //   screenX = r + rx * scale            → fx = (screenX - r) / scale
+    //   screenY = r - fz * scale            → fz = (r - screenY) / scale
+    // So from 2D screen coords we get: fx = rx, fz known, fy (depth) = sqrt(1 - fx² - fz²)
+    // Then un-tilt: ry = fz*sinTX + fy*cosTX,  cz = fz*cosTX - fy*sinTX
+    // Then un-rotateY: cx = rx*cosRY - ry*sinRY,  cy = rx*sinRY + ry*cosRY
+    // (using inverse = transpose since rotation matrices are orthogonal,
+    //  but note rotY was negated, so inverse uses -rotY → cos same, sin flipped)
+    if (planetCanvas && orbitCore) {
+      const coreRect = orbitCore.getBoundingClientRect();
+      const coreCx = coreRect.left + coreRect.width * 0.5;
+      const coreCy = coreRect.top + coreRect.height * 0.5;
+      const coreR = Math.max(coreRect.width, coreRect.height) * 0.5;
+      // Convert viewport-normalized mouse to pixel distance from globe center
+      const mPxX = (mouseX * 0.5 + 0.5) * width - coreCx;
+      const mPxY = (mouseY * 0.5 + 0.5) * height - coreCy;
+      const mDist = Math.sqrt(mPxX * mPxX + mPxY * mPxY);
+      // Proximity: 1.0 when cursor is at globe center, 0 when far away
+      globeMouseProximity = clamp(1 - mDist / (coreR * 2.5), 0, 1);
+      // Unproject mouse to 3D world-space direction on the globe
+      if (mDist < coreR * 1.5 && globeMouseProximity > 0.05) {
+        const projR = coreR * breathScale * 0.90;
+        // fx (= rx) and fz from screen coords
+        const fx = mPxX / projR;
+        const fz = -mPxY / projR;   // screenY = r - fz*scale → fz = -mPxY/scale
+        const fSq = fx * fx + fz * fz;
+        if (fSq < 1.0) {
+          const fy = Math.sqrt(Math.max(0, 1 - fSq));  // depth (facing us = positive)
+          // Reverse tilt (inverse of X-axis rotation by tiltX):
+          //   ry = fz * sinTX + fy * cosTX
+          //   cz = fz * cosTX - fy * sinTX
+          const ry = fz * sinTX + fy * cosTX;
+          const wcz = fz * cosTX - fy * sinTX;
+          // Reverse Y-rotation (inverse of Y-axis rotation by rotY):
+          //   Since forward was rx = cx*cosRY + cy*sinRY, ry = -cx*sinRY + cy*cosRY
+          //   Inverse: cx = rx*cosRY - ry*sinRY, cy = rx*sinRY + ry*cosRY
+          //   But rotY includes a negation, so inverse flips sign of sinRY:
+          globeMouseNx = fx * cosRY + ry * sinRY;
+          globeMouseNy = -fx * sinRY + ry * cosRY;
+          globeMouseNz = wcz;
+        } else {
+          globeMouseProximity = 0;
+        }
+      } else {
+        globeMouseProximity = 0;
+      }
     }
 
-    // ── Clip for overlays on sphere surface ──
-    context.save();
-    context.beginPath();
-    context.arc(cx, cy, planetRadius, 0, Math.PI * 2);
-    context.clip();
+    planetCtx.clearRect(0, 0, planetCanvas.width, planetCanvas.height);
+    planetCtx.save();
+    planetCtx.scale(dpr, dpr);
+    planetCtx.globalAlpha = clamp(orbitReveal * 1.4, 0, 1);
 
-    // ── Water shimmer / specular highlight (sun glint) ──
-    const shimPhase = reduceMotion ? 0 : nowSeconds * 0.4;
-    const shimX = cx - planetRadius * 0.32 + Math.sin(shimPhase) * planetRadius * 0.06;
-    const shimY = cy - planetRadius * 0.28 + Math.cos(shimPhase * 0.7) * planetRadius * 0.04;
-    const shimGrad = context.createRadialGradient(shimX, shimY, 0, shimX, shimY, planetRadius * 0.5);
-    shimGrad.addColorStop(0, `rgba(200, 235, 255, ${0.22 * glowPulse})`);
-    shimGrad.addColorStop(0.25, `rgba(160, 210, 255, ${0.09 * glowPulse})`);
-    shimGrad.addColorStop(1, "rgba(140, 200, 255, 0)");
-    context.fillStyle = shimGrad;
-    context.fillRect(cx - planetRadius, cy - planetRadius, diameter, diameter);
+    // Clip to circle
+    planetCtx.save();
+    planetCtx.beginPath();
+    planetCtx.arc(r, r, r - 1, 0, Math.PI * 2);
+    planetCtx.clip();
 
-    // ── Terminator shadow (day/night boundary) ──
-    const termGrad = context.createLinearGradient(cx - planetRadius, cy, cx + planetRadius, cy);
-    termGrad.addColorStop(0, "rgba(0, 0, 0, 0)");
-    termGrad.addColorStop(0.45, "rgba(0, 0, 0, 0)");
-    termGrad.addColorStop(0.68, "rgba(0, 0, 0, 0.2)");
-    termGrad.addColorStop(0.82, "rgba(0, 0, 0, 0.45)");
-    termGrad.addColorStop(0.95, "rgba(0, 0, 0, 0.65)");
-    termGrad.addColorStop(1, "rgba(0, 0, 0, 0.78)");
-    context.fillStyle = termGrad;
-    context.fillRect(cx - planetRadius, cy - planetRadius, diameter, diameter);
+    const glowPulse = reduceMotion ? 0.65 : 0.5 + Math.sin(nowSeconds * 1.8) * 0.3;
 
-    // ── 3D lighting (upper-left highlight for depth) ──
-    const lightGrad = context.createRadialGradient(
-      cx - planetRadius * 0.35, cy - planetRadius * 0.35, planetRadius * 0.02,
-      cx + planetRadius * 0.15, cy + planetRadius * 0.15, planetRadius * 1.05
-    );
-    lightGrad.addColorStop(0, "rgba(210, 235, 255, 0.14)");
-    lightGrad.addColorStop(0.25, "rgba(140, 195, 245, 0.05)");
-    lightGrad.addColorStop(0.7, "rgba(0, 0, 0, 0)");
-    lightGrad.addColorStop(1, "rgba(0, 0, 30, 0.08)");
-    context.fillStyle = lightGrad;
-    context.fillRect(cx - planetRadius, cy - planetRadius, diameter, diameter);
+    // ── Energy Core: particle nebula BEHIND the wireframe ──
+    planetCtx.save();
+    planetCtx.globalCompositeOperation = "lighter";
 
-    context.restore(); // End sphere clip
+    // Mouse influence on particles
+    const mxInfluence = mouseX * 0.15;
+    const myInfluence = mouseY * 0.15;
 
-    // ── Atmosphere rim light (bright blue edge like ISS Earth photos) ──
-    context.lineWidth = 3;
-    const rimGrad = context.createRadialGradient(
-      cx - planetRadius * 0.12, cy - planetRadius * 0.12, planetRadius * 0.78,
-      cx, cy, planetRadius * 1.06
-    );
-    rimGrad.addColorStop(0, "rgba(80, 160, 255, 0)");
-    rimGrad.addColorStop(0.65, `rgba(90, 175, 255, ${0.12 + glowPulse * 0.08})`);
-    rimGrad.addColorStop(0.85, `rgba(70, 155, 255, ${0.35 + glowPulse * 0.15})`);
-    rimGrad.addColorStop(1, `rgba(55, 135, 255, ${0.55 + glowPulse * 0.12})`);
-    context.strokeStyle = rimGrad;
-    context.beginPath();
-    context.arc(cx, cy, planetRadius, 0, Math.PI * 2);
-    context.stroke();
+    // Central energy glow — pulsing core, synced with breath
+    const corePulse = 0.5 + Math.sin(nowSeconds * 2.2) * 0.25 + Math.sin(nowSeconds * 3.7) * 0.12;
+    const coreR = r * 0.35 * breathScale * (1 + corePulse * 0.2);
+    const coreGrd = planetCtx.createRadialGradient(r, r, 0, r, r, coreR);
+    coreGrd.addColorStop(0, `rgba(220, 240, 255, ${corePulse * 0.5})`);
+    coreGrd.addColorStop(0.2, `rgba(140, 190, 255, ${corePulse * 0.3})`);
+    coreGrd.addColorStop(0.5, `rgba(80, 140, 255, ${corePulse * 0.12})`);
+    coreGrd.addColorStop(1, "rgba(40, 80, 200, 0)");
+    planetCtx.fillStyle = coreGrd;
+    planetCtx.fillRect(0, 0, s, s);
 
-    // Second thinner inner rim
-    context.lineWidth = 1.2;
-    context.strokeStyle = `rgba(170, 215, 255, ${0.2 + glowPulse * 0.08})`;
-    context.beginPath();
-    context.arc(cx, cy, planetRadius + 3, 0, Math.PI * 2);
-    context.stroke();
+    // Secondary wider ambient glow — synced with breath
+    const ambR = r * 0.7 * breathScale;
+    const ambGrd = planetCtx.createRadialGradient(r, r, 0, r, r, ambR);
+    ambGrd.addColorStop(0, `rgba(60, 120, 220, ${corePulse * 0.08})`);
+    ambGrd.addColorStop(0.5, `rgba(40, 90, 180, ${corePulse * 0.04})`);
+    ambGrd.addColorStop(1, "rgba(20, 50, 120, 0)");
+    planetCtx.fillStyle = ambGrd;
+    planetCtx.fillRect(0, 0, s, s);
 
-    // ── HUD text below planet ──
-    context.globalAlpha = planetAlpha;
-    context.font = `${isMobile ? 8 : 9}px "IBM Plex Mono", monospace`;
-    context.textAlign = "center";
-    context.fillStyle = `rgba(250, 250, 250, ${0.45 * planetAlpha})`;
-    context.fillText("NAVIGATION CORE", cx, cy + planetRadius + (isMobile ? 16 : 22));
-    context.font = `${isMobile ? 7 : 7.5}px "IBM Plex Mono", monospace`;
-    context.fillStyle = `rgba(250, 250, 250, ${0.28 * planetAlpha})`;
-    context.fillText(`${orbitNodes.length} SECTORS ACTIVE`, cx, cy + planetRadius + (isMobile ? 24 : 31));
+    // Update and draw particles
+    const delta16 = reduceMotion ? 0.5 : 1;
+    const hueColors = [
+      [90, 150, 255],   // 0 = blue
+      [120, 220, 250],  // 1 = cyan
+      [230, 240, 255],  // 2 = white-hot
+    ];
 
-    context.restore();
+    for (const p of coreParticles) {
+      // Advance lifecycle
+      p.life += delta16 * 0.006 / p.maxLife;
+      if (p.life >= 1) {
+        initCoreParticle(p, true);
+        continue;
+      }
+
+      // Orbital motion (swirl around Y axis)
+      const swirlSpeed = p.layer === 0 ? 0.03 : p.layer === 1 ? 0.015 : 0.005;
+      const cosS = Math.cos(swirlSpeed * delta16);
+      const sinS = Math.sin(swirlSpeed * delta16);
+      const nx = p.x * cosS - p.z * sinS;
+      const nz = p.x * sinS + p.z * cosS;
+      p.x = nx;
+      p.z = nz;
+
+      // Apply velocity + mouse push
+      const pushDist = Math.sqrt(p.x * p.x + p.z * p.z) + 0.01;
+      p.x += p.vx * delta16 + mxInfluence * 0.003 / pushDist;
+      p.y += p.vy * delta16 + myInfluence * 0.003 / pushDist;
+      p.z += p.vz * delta16;
+
+      // Gentle pull back toward center (gravity)
+      const dist = Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+      const maxDist = p.layer === 0 ? 0.3 : p.layer === 1 ? 0.55 : 0.85;
+      if (dist > maxDist) {
+        const pullStrength = (dist - maxDist) * 0.025;
+        p.x -= (p.x / dist) * pullStrength;
+        p.y -= (p.y / dist) * pullStrength;
+        p.z -= (p.z / dist) * pullStrength;
+      }
+
+      // Lifecycle fade (in/out)
+      const lifeFade = p.life < 0.12
+        ? p.life / 0.12
+        : p.life > 0.75 ? (1 - p.life) / 0.25 : 1;
+
+      // Project to 2D (match globe rotation) — scale with breath
+      const rx = p.x * cosRY + p.z * sinRY;
+      const rz = -p.x * sinRY + p.z * cosRY;
+      const fy = rz * cosTX - p.y * sinTX;
+      const fz = rz * sinTX + p.y * cosTX;
+      const particleScale = r * 0.88 * breathScale;
+      const px = r + rx * particleScale;
+      const py = r - fz * particleScale;
+      const depth = fy;
+
+      // MUCH brighter alpha — front particles really pop
+      const depthAlpha = clamp(0.35 + (depth + 1) * 0.45, 0.15, 1);
+      const alpha = lifeFade * p.brightness * depthAlpha * (0.7 + glowPulse * 0.5);
+
+      if (alpha < 0.02) continue;
+
+      const col = hueColors[p.hue] || hueColors[0];
+      const drawSize = p.size * (0.8 + (depth + 1) * 0.35);
+
+      // Glow halo — more particles get halos now
+      if (alpha > 0.08 && drawSize > 0.4) {
+        const glowR = drawSize * 4;
+        const grd = planetCtx.createRadialGradient(px, py, 0, px, py, glowR);
+        grd.addColorStop(0, `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${alpha * 0.5})`);
+        grd.addColorStop(0.5, `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${alpha * 0.12})`);
+        grd.addColorStop(1, `rgba(${col[0]}, ${col[1]}, ${col[2]}, 0)`);
+        planetCtx.fillStyle = grd;
+        planetCtx.beginPath();
+        planetCtx.arc(px, py, glowR, 0, Math.PI * 2);
+        planetCtx.fill();
+      }
+
+      // Solid bright particle
+      planetCtx.globalAlpha = Math.min(1, alpha * 1.3);
+      planetCtx.fillStyle = `rgb(${col[0]}, ${col[1]}, ${col[2]})`;
+      planetCtx.beginPath();
+      planetCtx.arc(px, py, Math.max(0.4, drawSize), 0, Math.PI * 2);
+      planetCtx.fill();
+    }
+
+    planetCtx.globalAlpha = 1;
+    planetCtx.globalCompositeOperation = "source-over";
+    planetCtx.restore();
+
+    // ── Project and draw each hex/pent cell ──
+    const cellProjectScale = r * 0.90 * breathScale;
+
+    for (const cell of hexCells) {
+      // Back-face check on cell center
+      const [ncx, ncy, ncz] = cell.center;
+      const nrx = ncx * cosRY + ncy * sinRY;
+      const nry = -ncx * sinRY + ncy * cosRY;
+      const viewDepth = nry * cosTX - ncz * sinTX;
+      if (viewDepth < -0.2) continue;
+
+      // ── Mouse proximity highlight ──
+      // Dot product between cell center (world space) and mouse direction
+      let mouseHighlight = 0;
+      if (globeMouseProximity > 0.05) {
+        const dot = ncx * globeMouseNx + ncy * globeMouseNy + ncz * globeMouseNz;
+        // dot > 0.7 means cell faces toward mouse; fade smoothly
+        mouseHighlight = clamp((dot - 0.4) / 0.5, 0, 1) * globeMouseProximity;
+      }
+
+      // Project all corners
+      const projected: { x: number; y: number }[] = [];
+      let avgDepth = 0;
+
+      for (const [cx, cy, cz] of cell.corners) {
+        const rx = cx * cosRY + cy * sinRY;
+        const ry = -cx * sinRY + cy * cosRY;
+        const fx = rx;
+        const fy = ry * cosTX - cz * sinTX;
+        const fz = ry * sinTX + cz * cosTX;
+        projected.push({
+          x: r + fx * cellProjectScale,
+          y: r - fz * cellProjectScale,
+        });
+        avgDepth += fy;
+      }
+      avgDepth /= projected.length;
+
+      // Depth-based alpha and line width
+      const depthAlpha = clamp(0.08 + (avgDepth + 1) * 0.32, 0.04, 0.60);
+      const lineW = 0.4 + clamp((avgDepth + 1) * 0.3, 0, 0.6);
+
+      // ── Color blending: base blue → warm gold on mouse proximity ──
+      const baseR = 100, baseG = 180, baseB = 255;     // default hex blue
+      const warmR = 235, warmG = 190, warmB = 100;      // warm gold highlight
+      const mh = mouseHighlight * mouseHighlight;       // quadratic for softer falloff
+      const cellR = Math.round(baseR + (warmR - baseR) * mh);
+      const cellG = Math.round(baseG + (warmG - baseG) * mh);
+      const cellB = Math.round(baseB + (warmB - baseB) * mh);
+      // Boost alpha for highlighted cells
+      const highlightAlphaBoost = 1 + mh * 2.0;
+
+      // Stroke the hex/pent outline
+      planetCtx.strokeStyle = `rgba(${cellR}, ${cellG}, ${cellB}, ${depthAlpha * glowPulse * 1.3 * highlightAlphaBoost})`;
+      planetCtx.lineWidth = lineW + mh * 0.6;
+      planetCtx.beginPath();
+      planetCtx.moveTo(projected[0].x, projected[0].y);
+      for (let k = 1; k < projected.length; k++) {
+        planetCtx.lineTo(projected[k].x, projected[k].y);
+      }
+      planetCtx.closePath();
+      planetCtx.stroke();
+
+      // ── Fill highlighted cells with a warm glow ──
+      if (mh > 0.05) {
+        planetCtx.fillStyle = `rgba(${warmR}, ${warmG}, ${warmB}, ${mh * 0.12 * depthAlpha})`;
+        planetCtx.fill();
+      }
+
+      // Glowing vertex dots at each corner
+      if (avgDepth > -0.15) {
+        const dotAlpha = clamp(0.1 + (avgDepth + 1) * 0.35, 0.05, 0.75) * glowPulse * 1.2 * highlightAlphaBoost;
+        const dotR = 0.5 + clamp((avgDepth + 1) * 0.55, 0, 1.0) + mh * 0.4;
+
+        for (const p of projected) {
+          // Glow halo on front-facing cells
+          if (avgDepth > 0.2) {
+            const glowR = dotR * 2.5;
+            const grd = planetCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
+            grd.addColorStop(0, `rgba(${Math.min(255, cellR + 60)}, ${Math.min(255, cellG + 40)}, ${cellB}, ${dotAlpha * 0.4})`);
+            grd.addColorStop(1, `rgba(${cellR}, ${cellG}, ${cellB}, 0)`);
+            planetCtx.fillStyle = grd;
+            planetCtx.beginPath();
+            planetCtx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
+            planetCtx.fill();
+          }
+
+          planetCtx.fillStyle = `rgba(${Math.min(255, cellR + 80)}, ${Math.min(255, cellG + 40)}, ${cellB}, ${dotAlpha})`;
+          planetCtx.beginPath();
+          planetCtx.arc(p.x, p.y, dotR, 0, Math.PI * 2);
+          planetCtx.fill();
+        }
+      }
+    }
+
+    planetCtx.restore(); // end clip
+    planetCtx.restore();
   };
 
   const drawStarField = (
@@ -889,10 +1483,22 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
         context.stroke();
       }
 
-      context.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
-      context.beginPath();
-      context.arc(sx, sy, radius, 0, Math.PI * 2);
-      context.fill();
+      // Draw V logo stamp or regular circle
+      if (star.isVLogo && vStampReady) {
+        // V logos are ~2.5x the size of a normal star dot for visibility
+        const vSize = radius * 7;
+        if (vSize > 1.2) { // skip if too tiny to see
+          context.save();
+          context.globalAlpha = alpha * 0.85; // slightly more transparent than dots
+          context.drawImage(vStampCanvas, sx - vSize * 0.5, sy - vSize * 0.5, vSize, vSize);
+          context.restore();
+        }
+      } else {
+        context.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${alpha})`;
+        context.beginPath();
+        context.arc(sx, sy, radius, 0, Math.PI * 2);
+        context.fill();
+      }
 
       star.prevX = sx;
       star.prevY = sy;
@@ -935,7 +1541,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       return;
     }
 
-    const isNarrowStack = width < 380;
+    const isNarrowStack = width < 340;
     if (isNarrowStack) {
       orbitNodes.forEach(node => {
         node.style.transform = "";
@@ -944,11 +1550,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       return;
     }
 
-    const radius = (isMobile ? config.orbit.radiusMobile : config.orbit.radiusDesktop) * (0.9 + orbitReveal * 0.24);
-    const ellipseRatio = isMobile ? 0.66 : 0.58;
-    const baseSpin = reduceMotion
-      ? scrollProgress * Math.PI * 0.58 + touchSpinOffset
-      : nowSeconds * 0.17 + scrollProgress * Math.PI * 0.55 + touchSpinOffset;
+    const baseRadius = getOrbitRadius() * (0.9 + orbitReveal * 0.24);
     const nodeOpacity = clamp(orbitReveal * 1.2, 0, 1);
     const nodeScale = 0.9 + orbitReveal * 0.14;
 
@@ -966,30 +1568,72 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       });
       requestAnimationFrame(() => {
         orbitNodes.forEach(node => {
-          node.style.transition = "transform 0.12s ease-out, opacity 0.2s ease, border-color 0.22s ease, background-color 0.22s ease, max-height 0.28s ease, padding 0.22s ease";
+          node.style.transition = "transform 0.12s ease-out, opacity 0.2s ease";
         });
       });
     }
 
+    // Apply tilt rotation to orbit nodes (matches globe tilt)
+    const cosTilt = Math.cos(touchTiltOffset);
+    const sinTilt = Math.sin(touchTiltOffset);
+
     orbitNodes.forEach((node, index) => {
-      const angle = orbitAngles[index] + baseSpin;
+      const ringIdx = nodeRingAssignments[index];
+      const ringCfg = config.orbit.rings[ringIdx];
+      const radius = baseRadius * ringCfg.radiusFactor;
+      const ratio = isMobile ? ringCfg.ellipseRatioMobile : ringCfg.ellipseRatio;
+
+      const baseSpin = computeBaseSpin(nowSeconds, ringCfg.speedMultiplier);
+      const angle = orbitAngles[index] + baseSpin + ringCfg.tiltOffset;
+
+      // 3D orbit position (x = horizontal, y = depth, z = vertical)
+      const ox = Math.cos(angle) * radius;
+      const oy = Math.sin(angle) * radius * 0.3; // depth (into screen)
+      const oz = Math.sin(angle) * radius * ratio;
+
+      // Apply tilt rotation around X-axis
+      const tiltedY = oy * cosTilt - oz * sinTilt;
+      const tiltedZ = oy * sinTilt + oz * cosTilt;
+
       const drift = reduceMotion ? 0 : Math.sin(nowSeconds * 0.8 + index * 0.9) * 8 * orbitReveal;
-      const x = Math.cos(angle) * radius + mouseX * 14;
-      const y = Math.sin(angle) * radius * ellipseRatio + mouseY * 10 + drift * 0.25;
-      const depthMix = (Math.sin(angle) + 1) * 0.5;
+      const parallaxX = isMobile ? 4 : 14;
+      const parallaxY = isMobile ? 3 : 10;
+      const x = ox + mouseX * parallaxX;
+      const y = tiltedZ + mouseY * parallaxY + drift * 0.25;
 
-      // Stronger depth sorting
+      // Depth from tilted position (-1 to 1 range)
+      const depthMix = clamp((tiltedY / radius + 1) * 0.5, 0, 1);
+
+      // ── Globe occlusion: ONLY when node is physically behind AND overlapping the globe disc ──
+      const globeScreenR = planetSize * 0.5;
+      const distFromCenter = Math.sqrt(x * x + y * y);
+      const isBehind = depthMix < 0.45;
+      const isOverlappingGlobe = distFromCenter < globeScreenR;
+
+      let occlusionAlpha = 1;
+      let blurPx = 0;
+
+      if (isBehind && isOverlappingGlobe) {
+        // Only occlude when the node is visually passing through the globe area
+        const behindAmount = clamp((0.45 - depthMix) / 0.4, 0, 1);
+        const overlapAmount = clamp(1 - distFromCenter / globeScreenR, 0, 1);
+        const occlusionStrength = behindAmount * overlapAmount;
+        occlusionAlpha = clamp(1 - occlusionStrength * 0.80, 0.05, 1);
+        blurPx = occlusionStrength * 12;
+      }
+
+      // Depth sorting
       const depthScale = nodeScale * (0.78 + depthMix * 0.28);
-      const depthOpacity = nodeOpacity * (0.45 + depthMix * 0.55);
+      const depthOpacity = nodeOpacity * (0.45 + depthMix * 0.55) * occlusionAlpha;
 
-      node.style.zIndex = `${Math.round(depthMix * 10)}`;
+      node.style.zIndex = (isBehind && isOverlappingGlobe) ? "-1" : `${Math.round(depthMix * 10)}`;
       node.style.opacity = `${depthOpacity}`;
+      node.style.filter = blurPx > 0.2 ? `blur(${blurPx.toFixed(1)}px)` : "none";
       node.style.transform = `translate(calc(-50% + ${x.toFixed(2)}px), calc(-50% + ${y.toFixed(2)}px)) scale(${depthScale.toFixed(3)})`;
 
-      // Accent glow
+      // Set accent color as CSS variable for dot + popup styling
       const { accent } = nodeAccents[index];
-      node.style.borderColor = `${accent}44`;
-      node.style.boxShadow = `0 0 ${(12 + depthMix * 8).toFixed(0)}px ${accent}33, inset 0 0 6px ${accent}11`;
+      node.style.setProperty("--node-accent", accent);
     });
   };
 
@@ -1003,43 +1647,118 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     scrollEnergy = Math.max(0, scrollEnergy * 0.94 - 0.002);
     pointerEnergy = Math.max(0, pointerEnergy * 0.92 - 0.002);
 
-    const slideWindow = Math.max(config.orbit.start - 0.16, 0.0001);
+    // Momentum decay for drag spin (horizontal + vertical tilt)
+    touchSpinVelocity *= 0.95;
+    if (Math.abs(touchSpinVelocity) > 0.0001) touchSpinOffset += touchSpinVelocity;
+
+    touchTiltVelocity *= 0.95;
+    if (Math.abs(touchTiltVelocity) > 0.0001) touchTiltOffset += touchTiltVelocity;
+    // Gently return tilt to zero when not dragging (spring-back)
+    if (!isTouchDragging && !isMouseDragging) {
+      touchTiltOffset *= 0.97;
+      if (Math.abs(touchTiltOffset) < 0.001) touchTiltOffset = 0;
+    }
+
+    // slideWindow = the scroll range for all 4 titles.
+    // The LAST slide stays in its hold until introOpacity fades the panel,
+    // so slideWindow should extend to where introOpacity ≈ 0.
+    // introOpacity fades: orbit.start-0.12 → orbit.start-0.02 = 0.64 → 0.74
+    // Set slideWindow = orbit.start - 0.02 = 0.74 so slideProgress=1.0
+    // at the exact moment the intro panel is nearly invisible.
+    const slideWindow = Math.max(config.orbit.start - 0.02, 0.0001);
     const slideProgress = clamp(scrollProgress / slideWindow, 0, 1);
     const stageValue = slideProgress * Math.max(stageThemes.length - 1, 1);
     const stageLower = Math.floor(stageValue);
     const stageUpper = Math.min(stageThemes.length - 1, stageLower + 1);
     const stageMix = stageValue - stageLower;
 
-    const introWarpWindowStart = Math.max(config.orbit.start - 0.22, 0.2);
-    const introWarpWindowEnd = Math.max(config.orbit.start - 0.03, introWarpWindowStart + 0.01);
+    // Warp kicks in during the last slide's fly-out and orbit approach
+    // orbit.start=0.76, so warp ramps 0.68→0.74 (slide 3 fly-out zone)
+    const introWarpWindowStart = Math.max(config.orbit.start - 0.08, 0.4);
+    const introWarpWindowEnd = Math.max(config.orbit.start - 0.02, introWarpWindowStart + 0.01);
     let warpStrength =
       smoothstep(introWarpWindowStart, introWarpWindowEnd, scrollProgress) *
       (1 - smoothstep(config.orbit.start - 0.02, config.orbit.full, scrollProgress));
     const orbitReveal = smoothstep(config.orbit.start, config.orbit.full, scrollProgress);
+    // ── Star speed ↔ title sync (frame-by-frame) ──
+    //
+    // Title phases per slide (t = intra-slide progress 0→1):
+    //   FLY-IN  t 0.00–0.15: title arrives from vanishing pt (stars hot, settling)
+    //   HOLD    t 0.15–0.75: title readable (stars CALM at this stage's speed)
+    //   FLY-OUT t 0.75–1.00: title departs along 290° (stars SURGE to next stage)
+    //
+    // The SURGE during fly-out is what makes it feel like you're accelerating
+    // through space — the title and stars speed up TOGETHER.
+    //
+    // speedStages [1, 6, 18, 42, 100] — hold speeds for each slide:
+    //   [0] slide 0 hold = 1  (gentle idle while reading hero headline)
+    //   [1] slide 1 hold = 6  (cruising)
+    //   [2] slide 2 hold = 18 (building)
+    //   [3] slide 3 hold = 42 (intense)
+    //   [4] orbit push  = 100 (max — only reached during final fly-out)
+    //
     const intraSlide = (slideProgress * slides.length) % 1;
-    const activeSlideIndex = Math.floor(slideProgress * slides.length);
-    const stageIndex = slideProgress < 0.02 ? 0 : clamp(activeSlideIndex + 1, 0, speedStages.length - 1);
-    const nextStageIndex = Math.min(stageIndex + 1, speedStages.length - 1);
-    const stageBlend = smoothstep(0.25, 0.75, intraSlide);
-    const stageSpeed = lerp(speedStages[stageIndex], speedStages[nextStageIndex], stageBlend);
-    const stageSpeedNormalized = clamp((stageSpeed - 1) / 99, 0, 1);
-    const leverageBoundary = 2 / 3;
-    const transitionBurst = smoothstep(leverageBoundary - 0.06, leverageBoundary + 0.05, slideProgress);
-    const executionBoost = smoothstep(leverageBoundary, 0.96, slideProgress);
+    const activeSlideIndex = Math.floor(clamp(slideProgress, 0, 0.999) * slides.length);
+
+    const flyInEnd = 0.15;  // must match title flyInEnd
+    const holdEnd = 0.75;   // must match title holdEnd
+
+    const baseIdx = clamp(activeSlideIndex, 0, speedStages.length - 1);
+    const nextIdx = Math.min(baseIdx + 1, speedStages.length - 1);
+    const holdSpeed = speedStages[baseIdx];
+    const nextHoldSpeed = speedStages[nextIdx];
+
+    // Peak speed during transition = midpoint between current and next hold
+    // (so the surge is proportional to the gap between stages)
+    const transitionPeak = holdSpeed + (nextHoldSpeed - holdSpeed) * 0.7;
+
+    let continuousSpeed: number;
+    if (intraSlide < flyInEnd) {
+      // FLY-IN: stars are still hot from the previous fly-out surge,
+      // decelerating into this slide's calm hold speed
+      const settleT = smoothstep(0, flyInEnd, intraSlide);
+      continuousSpeed = lerp(transitionPeak, holdSpeed, settleT);
+    } else if (intraSlide < holdEnd) {
+      // HOLD: calm and steady — you're reading the title
+      continuousSpeed = holdSpeed;
+    } else {
+      // FLY-OUT: title flying past → stars SURGE toward next stage
+      const surgeT = smoothstep(holdEnd, 0.96, intraSlide);
+      continuousSpeed = lerp(holdSpeed, transitionPeak, surgeT);
+    }
+
+    const stageSpeedNormalized = clamp((continuousSpeed - 1) / 99, 0, 1);
+
+    // Extra boost for the final slide's fly-out into orbit
+    const leverageBoundary = 3 / 4;
+    const transitionBurst = smoothstep(leverageBoundary - 0.04, leverageBoundary + 0.06, slideProgress);
+    const executionBoost = smoothstep(leverageBoundary + 0.05, 0.96, slideProgress);
     const boostedStageSpeed = clamp(stageSpeedNormalized + executionBoost * 0.35, 0, 1);
-    const sequencePulse = Math.sin(intraSlide * Math.PI);
+
+    // Transition pulse: extra sequenceBoost kick synced to title motion
+    // This adds the visual "burst" feeling — stars jump when titles move
+    const transitionPulse = intraSlide < flyInEnd
+      ? (1 - smoothstep(0, flyInEnd, intraSlide)) * 0.5  // fly-in: fading burst
+      : intraSlide > holdEnd
+        ? smoothstep(holdEnd, 1.0, intraSlide)             // fly-out: rising burst
+        : 0;                                                // hold: calm
+
     const sequenceBoost =
-      smoothstep(0.12, 0.98, slideProgress) *
+      smoothstep(0.06, 0.98, slideProgress) *
       (1 - smoothstep(config.orbit.start - 0.03, config.orbit.start + 0.06, scrollProgress)) *
-      (0.34 + sequencePulse * 0.66);
+      (0.10 + transitionPulse * 0.90);
 
     const orbitPhase = orbitReveal > 0.16;
+    const orbitExiting = scrollProgress > 0.98;
     const orbitSpeedReset = orbitReveal > 0.1;
     if (orbitSpeedReset) {
       warpStrength = 0;
     }
-    wrapper.classList.toggle("is-orbit-phase", orbitPhase);
+    wrapper.classList.toggle("is-orbit-phase", orbitPhase && !orbitExiting);
 
+    // ── Single opacity driver for the entire hero intro panel ──
+    // The intro panel (chip + slide titles + description + buttons + badges)
+    // has ONE driver: fade out as orbit reveals. Nothing else touches it.
     const introOpacity = clamp(
       1 - smoothstep(config.orbit.start - 0.12, config.orbit.start - 0.02, scrollProgress),
       0,
@@ -1051,22 +1770,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       introPanel.style.pointerEvents = introOpacity < 0.2 ? "none" : "auto";
     }
 
-    if (headline) {
-      const headlineFade = clamp(1 - smoothstep(0.02, 0.08, slideProgress), 0, 1);
-      headline.style.opacity = `${headlineFade * introOpacity}`;
-    }
-
-    if (slideTrack) {
-      // Slide track fades in with slideProgress, but fades out earlier
-      // than introPanel so it's gone before orbit menu appears
-      const trackFadeOut = clamp(
-        1 - smoothstep(config.orbit.start - 0.12, config.orbit.start - 0.02, scrollProgress),
-        0, 1
-      );
-      const trackOpacity = smoothstep(0.04, 0.12, slideProgress) * trackFadeOut;
-      slideTrack.style.opacity = `${trackOpacity}`;
-      slideTrack.style.pointerEvents = trackOpacity > 0.2 ? "auto" : "none";
-    }
+    // Scroll exit fade — canvas glow fades when sticky section unpins
+    const canvasOrbitFade = 1 - smoothstep(0.96, 1.0, scrollProgress);
 
     drawAtmosphere(stageThemes[stageLower], stageThemes[stageUpper], stageMix);
     const orbitDampen = 1 - smoothstep(config.orbit.start - 0.02, config.orbit.start + 0.04, scrollProgress);
@@ -1079,12 +1784,17 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       orbitSpeedReset ? 0 : boostedStageSpeed,
       orbitDampen
     );
-    drawOrbitRings(nowSeconds, orbitReveal, delta);
-    drawSpokes(nowSeconds, orbitReveal);
-    if (orbitReveal > 0.02 && !reduceMotion) updateCloudTexture(nowSeconds);
-    drawPlanet(nowSeconds, orbitReveal);
+
+    // Planet glow on main canvas (fades with scroll exit)
+    drawPlanetGlow(orbitReveal, nowSeconds, canvasOrbitFade);
+
+    // SVG spokes + pulse dots + hex globe + DOM nodes (all in orbit-menu DOM)
+    updateOrbitSVG(nowSeconds, orbitReveal);
+    updateSpokeSVG(nowSeconds, orbitReveal);
+    updateSpokePulses(nowSeconds, delta, orbitReveal);
+    drawHexGlobe(nowSeconds, orbitReveal);
     updateOrbitMenu(nowSeconds, orbitReveal);
-    setSlides(slideProgress);
+    updateSlidesFlyThrough(slideProgress);
 
     if (!reduceMotion) {
       frameId = window.requestAnimationFrame(draw);
@@ -1114,18 +1824,23 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   const touchMove = (e: TouchEvent) => {
     if (scrollProgress < config.orbit.start) return;
     const touch = e.touches[0];
-    const dx = touch.clientX - touchStartX;
+    let dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
 
-    if (!isTouchDragging && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (!isTouchDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
       isTouchDragging = true;
     }
 
     if (isTouchDragging) {
       e.preventDefault();
+      // Horizontal spin
       const spinDelta = dx * 0.004;
       touchSpinOffset += spinDelta;
       touchSpinVelocity = spinDelta;
+      // Vertical tilt (breaks orbital plane)
+      const tiltDelta = dy * -0.003;
+      touchTiltOffset = clamp(touchTiltOffset + tiltDelta, -1.2, 1.2);
+      touchTiltVelocity = tiltDelta;
       touchStartX = touch.clientX;
       touchStartY = touch.clientY;
     }
@@ -1133,16 +1848,68 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
 
   const touchEnd = () => { isTouchDragging = false; };
 
-  // Tap-to-expand on touch devices
-  if ("ontouchstart" in window) {
+  // Mouse click-and-drag spin handlers (desktop)
+  const mouseDown = (e: MouseEvent) => {
+    if (scrollProgress < config.orbit.start) return;
+    if ((e.target as HTMLElement).closest(".orbit-node")) return;
+    isMouseDragging = true;
+    mouseStartX = e.clientX;
+    mouseStartY = e.clientY;
+    orbitMenu?.classList.add("is-dragging");
+    e.preventDefault();
+  };
+
+  const mouseMoveHandler = (e: MouseEvent) => {
+    if (!isMouseDragging) return;
+    const dx = e.clientX - mouseStartX;
+    const dy = e.clientY - mouseStartY;
+    // Horizontal spin
+    const spinDelta = dx * 0.004;
+    touchSpinOffset += spinDelta;
+    touchSpinVelocity = spinDelta;
+    // Vertical tilt (breaks orbital plane — spin any direction!)
+    const tiltDelta = dy * -0.003;
+    touchTiltOffset = clamp(touchTiltOffset + tiltDelta, -1.2, 1.2);
+    touchTiltVelocity = tiltDelta;
+    mouseStartX = e.clientX;
+    mouseStartY = e.clientY;
+  };
+
+  const mouseUp = () => {
+    if (!isMouseDragging) return;
+    isMouseDragging = false;
+    orbitMenu?.classList.remove("is-dragging");
+  };
+
+  // Tap-to-expand on touch devices:
+  // 1st tap on node → show popup (prevent navigation)
+  // 2nd tap on popup → navigate to page
+  // Tap elsewhere → close popup
+  const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  if (isTouchDevice) {
     orbitNodes.forEach(node => {
       node.addEventListener("click", (e) => {
-        if (node.classList.contains("is-expanded")) return;
+        const clickedPopup = (e.target as HTMLElement).closest(".orbit-node__popup");
+        if (node.classList.contains("is-expanded") && clickedPopup) {
+          // Second tap on the popup → allow navigation (don't prevent default)
+          return;
+        }
+        // First tap or tap on dot → expand and show popup
         e.preventDefault();
         orbitNodes.forEach(n => n.classList.remove("is-expanded"));
         node.classList.add("is-expanded");
       });
     });
+
+    // Tap on orbit background → close any expanded node
+    if (orbitMenu) {
+      orbitMenu.addEventListener("click", (e) => {
+        const clickedNode = (e.target as HTMLElement).closest(".orbit-node");
+        if (!clickedNode) {
+          orbitNodes.forEach(n => n.classList.remove("is-expanded"));
+        }
+      });
+    }
   }
 
   const scrollToOrbit = () => {
@@ -1166,9 +1933,15 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     }
   });
 
+  // Initialize SVG, ring assignments, hex globe, and planet canvas
+  generateHexGlobe(isMobile ? 2 : 3); // 2 subs mobile (~80 hex cells), 3 desktop (~320 hex cells)
+  createOrbitSVG();
+  assignNodesToRings();
+  initSpokePulses();
+  initEnergyCoreParticles();
   resize();
-  updateSlideTrackLayout();
-  setSlides(0);
+  initPlanetCanvas();
+  updateSlidesFlyThrough(0);
   if (reduceMotion) {
     draw(performance.now());
   } else {
@@ -1185,7 +1958,26 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     orbitMenu.addEventListener("touchstart", touchStart, { passive: true });
     orbitMenu.addEventListener("touchmove", touchMove, { passive: false });
     orbitMenu.addEventListener("touchend", touchEnd, { passive: true });
+    orbitMenu.addEventListener("mousedown", mouseDown);
   }
+  window.addEventListener("mousemove", mouseMoveHandler);
+  window.addEventListener("mouseup", mouseUp);
+
+  // Hover-pause: freeze orbit when hovering any node (desktop only)
+  const pauseOrbit = () => {
+    if (orbitPaused) return;
+    orbitPaused = true;
+    pauseStartTime = performance.now() * 0.001;
+  };
+  const resumeOrbit = () => {
+    if (!orbitPaused) return;
+    pauseTimeOffset += performance.now() * 0.001 - pauseStartTime;
+    orbitPaused = false;
+  };
+  orbitNodes.forEach(node => {
+    node.addEventListener("mouseenter", pauseOrbit);
+    node.addEventListener("mouseleave", resumeOrbit);
+  });
 
   return () => {
     window.removeEventListener("resize", resize);
@@ -1194,7 +1986,10 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     if (skipIntroButton) {
       skipIntroButton.removeEventListener("click", scrollToOrbit);
     }
+    window.removeEventListener("mousemove", mouseMoveHandler);
+    window.removeEventListener("mouseup", mouseUp);
     if (orbitMenu) {
+      orbitMenu.removeEventListener("mousedown", mouseDown);
       orbitMenu.removeEventListener("touchstart", touchStart);
       orbitMenu.removeEventListener("touchmove", touchMove);
       orbitMenu.removeEventListener("touchend", touchEnd);

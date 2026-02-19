@@ -20,7 +20,7 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
 ---
 
 <header id="siteHeader" class="site-header sticky top-0 z-50">
-  <div class="section-shell flex h-18 items-center justify-between gap-3">
+  <div class="section-shell flex h-14 items-center justify-between gap-3 md:h-18">
     <a href={withBase("/")} class="flex items-center gap-3 font-semibold tracking-tight">
       <img
         src={withBase("/logos/simplified-white-text-red-arrow.png")}
@@ -28,7 +28,9 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
         class="h-4 w-auto object-contain"
       />
     </a>
-    <nav aria-label="Main navigation" class="header-nav-scroll">
+
+    <!-- Desktop nav (hidden on mobile) -->
+    <nav aria-label="Main navigation" class="header-nav-scroll header-nav--desktop">
       <ul class="flex items-center gap-1 text-sm md:gap-2">
         {
           navItems.map((item) => (
@@ -48,6 +50,42 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
         }
       </ul>
     </nav>
+
+    <!-- Mobile hamburger button (hidden on desktop) -->
+    <button
+      id="mobileMenuBtn"
+      class="mobile-menu-btn"
+      type="button"
+      aria-label="Open navigation menu"
+      aria-expanded="false"
+    >
+      <span class="mobile-menu-btn__line"></span>
+      <span class="mobile-menu-btn__line"></span>
+      <span class="mobile-menu-btn__line"></span>
+    </button>
+  </div>
+
+  <!-- Mobile push-down drawer (inside header, slides open below header bar) -->
+  <div id="mobileDrawer" class="mobile-drawer" aria-hidden="true">
+    <nav aria-label="Mobile navigation" class="mobile-drawer__nav">
+      {
+        navItems.map((item) => (
+          <a
+            href={withBase(item.href)}
+            class={`mobile-drawer__link ${
+              currentNormalized === normalizePath(item.href)
+                ? "mobile-drawer__link--active"
+                : ""
+            }`}
+          >
+            <span class="mobile-drawer__link-text">{item.label}</span>
+            <svg class="mobile-drawer__arrow" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        ))
+      }
+    </nav>
   </div>
 </header>
 
@@ -61,4 +99,40 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
   syncHeaderState();
   window.addEventListener("scroll", syncHeaderState, { passive: true });
   document.addEventListener("astro:page-load", syncHeaderState);
+
+  // Mobile drawer toggle
+  const menuBtn = document.getElementById("mobileMenuBtn");
+  const drawer = document.getElementById("mobileDrawer");
+  if (menuBtn && drawer) {
+    const toggleDrawer = (open?: boolean) => {
+      const shouldOpen = open ?? !drawer.classList.contains("is-open");
+      drawer.classList.toggle("is-open", shouldOpen);
+      menuBtn.classList.toggle("is-open", shouldOpen);
+      menuBtn.setAttribute("aria-expanded", String(shouldOpen));
+      drawer.setAttribute("aria-hidden", String(!shouldOpen));
+    };
+
+    menuBtn.addEventListener("click", () => toggleDrawer());
+
+    // Close on link click
+    drawer.querySelectorAll("a").forEach(link => {
+      link.addEventListener("click", () => toggleDrawer(false));
+    });
+
+    // Close on ESC
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && drawer.classList.contains("is-open")) {
+        toggleDrawer(false);
+      }
+    });
+
+    // Close when scrolling past a threshold
+    let lastScrollY = window.scrollY;
+    window.addEventListener("scroll", () => {
+      if (drawer.classList.contains("is-open") && Math.abs(window.scrollY - lastScrollY) > 100) {
+        toggleDrawer(false);
+      }
+      lastScrollY = window.scrollY;
+    }, { passive: true });
+  }
 </script>

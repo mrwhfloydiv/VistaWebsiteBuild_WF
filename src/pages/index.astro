@@ -8,32 +8,34 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
 
 const heroSlides = [
   {
+    title: "Decisions with weight.\nDelivery with speed.",
+    isHero: true,
+  },
+  {
     title: "Signal in\nthe noise.",
-    text: "Navigate complexity with location intelligence built for executive-level decisions."
   },
   {
     title: "Leverage in\nevery market.",
-    text: "Shape stronger outcomes with structured incentive strategy and negotiation support."
   },
   {
     title: "Execution that\nholds up.",
-    text: "Move from shortlist to implementation with fewer surprises and faster alignment."
-  }
+  },
 ];
 
 const orbitNodeMap = [
-  { slug: "economic-impact-studies", id: "node-eis" },
-  { slug: "aerospace-defense",      id: "node-aerospace" },
-  { slug: "data-analytics",         id: "node-data" },
-  { slug: "data-centers",           id: "node-datacenters" },
-  { slug: "incentives",             id: "node-incentives" },
-  { slug: "strategic-growth",       id: "node-growth" },
+  { slug: "economic-impact-studies",  id: "node-eis",         ring: 1 },
+  { slug: "aerospace-defense",       id: "node-aerospace",   ring: 2 },
+  { slug: "data-analytics",          id: "node-data",        ring: 2 },
+  { slug: "data-centers",            id: "node-datacenters", ring: 2 },
+  { slug: "incentives-compliance",   id: "node-incentives",  ring: 1 },
+  { slug: "leadership",              id: "node-leadership",  ring: 1 },
 ];
 
-const orbitNodes = orbitNodeMap.map(({ slug, id }) => {
+const orbitNodes = orbitNodeMap.map(({ slug, id, ring }) => {
   const team = teamBuckets.find(t => t.slug === slug)!;
   return {
     id,
+    ring,
     label: team.name,
     shortName: team.shortName,
     accent: team.accent,
@@ -42,6 +44,7 @@ const orbitNodes = orbitNodeMap.map(({ slug, id }) => {
   };
 }).concat([{
   id: "node-contact",
+  ring: 3,
   label: "Start a Conversation",
   shortName: "COMMS",
   accent: "#b5d9ee",
@@ -67,8 +70,13 @@ const homeMotionConfig = {
   orbit: {
     start: 0.76,
     full: 0.93,
-    radiusDesktop: 300,
-    radiusMobile: 195
+    radiusDesktop: 560,
+    radiusMobile: 280,
+    rings: [
+      { radiusFactor: 0.45, ellipseRatio: 0.52, ellipseRatioMobile: 0.60, speedMultiplier: 1.4, tiltOffset: 0, strokeAlpha: 0.10 },
+      { radiusFactor: 0.72, ellipseRatio: 0.58, ellipseRatioMobile: 0.66, speedMultiplier: 1.0, tiltOffset: 0.08, strokeAlpha: 0.14 },
+      { radiusFactor: 1.0, ellipseRatio: 0.64, ellipseRatioMobile: 0.72, speedMultiplier: 0.7, tiltOffset: -0.06, strokeAlpha: 0.18 },
+    ]
   }
 };
 ---
@@ -77,7 +85,7 @@ const homeMotionConfig = {
   title="Vista Site Selection | Reimagined"
   description="Responsive, motion-forward concept for Vista Site Selection featuring immersive storytelling and bucketed specialty teams."
 >
-  <section id="heroSequenceWrapper" class="hero-sequence-wrapper" data-motion-config={JSON.stringify(homeMotionConfig)}>
+  <section id="heroSequenceWrapper" class="hero-sequence-wrapper" data-motion-config={JSON.stringify(homeMotionConfig)} data-logo-src={withBase("/logos/vista-mark-white.png")} data-base-path={baseWithSlash.replace(/\/$/, "")}>
     <div class="hero-sequence-sticky">
       <canvas id="heroWaveCanvas" class="hero-wave-canvas" aria-hidden="true"></canvas>
       <div class="hero-noise-layer"></div>
@@ -86,10 +94,37 @@ const homeMotionConfig = {
       <div class="section-shell hero-overlay-grid hero-overlay-grid--solo">
         <div id="heroIntro" class="hero-stack">
           <span class="chip chip--ghost">Site Selection + Incentives + Analytics</span>
-          <h1 id="heroHeadline" class="hero-title">
-            Decisions with <span class="text-[#ebaa1f]">weight</span>.<br />
-            Delivery with <span class="text-[#b5d9ee]">speed</span>.
-          </h1>
+
+          <!-- Title fly-through zone — all 4 titles live here -->
+          <div id="heroSlideTrack" class="hero-slide-track-inline">
+            <div class="hero-slide-frame">
+              {
+                heroSlides.map((slide, index) => (
+                  <article
+                    class={`hero-slide ${index === 0 ? "is-active" : ""}`}
+                    data-slide
+                    data-hero={slide.isHero ? "true" : undefined}
+                  >
+                    <h2 class="hero-title">
+                      {slide.title.split("\n").map((line, lineIndex, lines) => (
+                        <>
+                          {slide.isHero && lineIndex === 0 ? (
+                            <Fragment>Decisions with <span class="text-[#ebaa1f]">weight</span>.</Fragment>
+                          ) : slide.isHero && lineIndex === 1 ? (
+                            <Fragment>Delivery with <span class="text-[#b5d9ee]">speed</span>.</Fragment>
+                          ) : (
+                            <Fragment>{line}</Fragment>
+                          )}
+                          {lineIndex < lines.length - 1 && <br />}
+                        </>
+                      ))}
+                    </h2>
+                  </article>
+                ))
+              }
+            </div>
+          </div>
+
           <p class="max-w-2xl text-lg text-white/80 md:text-xl">
             Vista helps organizations pick the right locations, secure stronger incentives, and move with confidence
             using data-backed strategy.
@@ -109,29 +144,9 @@ const homeMotionConfig = {
         </div>
       </div>
 
-      <div id="heroSlideTrack" class="section-shell hero-slide-track">
-        <div class="hero-slide-frame">
-          {
-            heroSlides.map((slide, index) => (
-              <article class={`hero-slide ${index === 0 ? "is-active" : ""}`} data-slide>
-                <h2 class="hero-title">
-                  {slide.title.split("\n").map((line, lineIndex, lines) => (
-                    <>
-                      {line}
-                      {lineIndex < lines.length - 1 && <br />}
-                    </>
-                  ))}
-                </h2>
-              </article>
-            ))
-          }
-        </div>
-      </div>
-
       <div id="orbitMenu" class="orbit-menu" aria-hidden="true">
         <div class="orbit-core">
-          <img src={withBase("/logos/vista-mark-white.png")} alt="" />
-          <p class="mono">Vista Navigation Core</p>
+          <canvas id="orbitPlanetCanvas" class="orbit-planet-canvas" aria-hidden="true"></canvas>
         </div>
         {
           orbitNodes.map((node, index) => (
@@ -141,14 +156,20 @@ const homeMotionConfig = {
               class="orbit-node"
               data-orbit-node
               data-orbit-index={index}
+              data-ring={node.ring}
               data-accent={node.accent}
               data-desc={node.description}
               data-short={node.shortName}
               aria-label={node.label}
             >
-              <span class="orbit-node__label">{node.label}</span>
-              <span class="orbit-node__desc">{node.description}</span>
-              <span class="orbit-node__arrow" aria-hidden="true">&rarr;</span>
+              <span class="orbit-node__dot"></span>
+              <span class="orbit-node__pulse"></span>
+              <span class="orbit-node__name">{node.shortName}</span>
+              <div class="orbit-node__popup">
+                <span class="orbit-node__popup-corner"></span>
+                <span class="orbit-node__label">{node.label}</span>
+                <span class="orbit-node__desc">{node.description}</span>
+              </div>
             </a>
           ))
         }
@@ -279,7 +300,7 @@ const homeMotionConfig = {
       </p>
       <div class="mt-7 flex flex-wrap justify-center gap-3">
         <a class="btn-primary magnetic-btn" href={withBase("/contact")}>Talk to Vista</a>
-        <a class="btn-secondary magnetic-btn" href={withBase("/teams/incentives")}>Speak with Incentives team</a>
+        <a class="btn-secondary magnetic-btn" href={withBase("/teams/incentives-compliance")}>Speak with Incentives team</a>
       </div>
     </div>
   </section>
