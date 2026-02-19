@@ -68,7 +68,7 @@ a {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* When drawer is open, header goes fully opaque — no canvas bleed */
+/* When drawer is open, header stays sticky but fully opaque */
 .site-header:has(.mobile-drawer.is-open),
 .site-header.is-drawer-open {
   background: #000;
@@ -536,6 +536,21 @@ a {
   height: 100svh;
   overflow: hidden;
   border-bottom: 1px solid rgba(250, 250, 250, 0.08);
+  transition: top 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* When menu is open, hero shifts down to make room — two independent blocks */
+body.menu-open .hero-sequence-sticky {
+  top: 50vh;
+  height: 50svh;
+}
+
+body.menu-open .hero-wave-canvas {
+  top: 50vh;
+  height: 50vh;
+  transition: top 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hero-wave-canvas {
@@ -546,6 +561,8 @@ a {
   height: 100%;
   z-index: 0;
   pointer-events: none;
+  transition: top 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hero-noise-layer {

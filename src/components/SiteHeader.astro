@@ -119,6 +119,7 @@ const withBase = (path) => `${baseWithSlash}${path.startsWith("/") ? path.slice(
       menuBtn.setAttribute("aria-expanded", String(shouldOpen));
       drawer.setAttribute("aria-hidden", String(!shouldOpen));
       headerEl?.classList.toggle("is-drawer-open", shouldOpen);
+      document.body.classList.toggle("menu-open", shouldOpen);
 
       if (shouldOpen) {
         // ── OPEN: expand drawer, cascade links in ──
