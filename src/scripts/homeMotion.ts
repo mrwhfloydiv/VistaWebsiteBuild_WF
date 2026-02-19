@@ -90,11 +90,11 @@ const defaultConfig: MotionConfig = {
     start: 0.62,
     full: 0.78,
     radiusDesktop: 260,
-    radiusMobile: 178,
+    radiusMobile: 220,
     rings: [
-      { radiusFactor: 0.45, ellipseRatio: 0.52, ellipseRatioMobile: 0.60, speedMultiplier: 1.4, tiltOffset: 0, strokeAlpha: 0.10 },
-      { radiusFactor: 0.72, ellipseRatio: 0.58, ellipseRatioMobile: 0.66, speedMultiplier: 1.0, tiltOffset: 0.08, strokeAlpha: 0.14 },
-      { radiusFactor: 1.0, ellipseRatio: 0.64, ellipseRatioMobile: 0.72, speedMultiplier: 0.7, tiltOffset: -0.06, strokeAlpha: 0.18 },
+      { radiusFactor: 0.45, ellipseRatio: 0.52, ellipseRatioMobile: 0.55, speedMultiplier: 1.4, tiltOffset: 0, strokeAlpha: 0.10 },
+      { radiusFactor: 0.72, ellipseRatio: 0.58, ellipseRatioMobile: 0.62, speedMultiplier: 1.0, tiltOffset: 0.08, strokeAlpha: 0.14 },
+      { radiusFactor: 1.0, ellipseRatio: 0.64, ellipseRatioMobile: 0.68, speedMultiplier: 0.7, tiltOffset: -0.06, strokeAlpha: 0.18 },
     ]
   }
 };

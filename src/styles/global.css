@@ -848,12 +848,12 @@ a {
   .orbit-menu {
     left: 50%;
     top: 50%;
-    width: min(98vw, 1100px);
-    height: min(88vh, 900px);
+    width: min(100vw, 1100px);
+    height: min(92vh, 900px);
   }
 
   .orbit-core {
-    width: clamp(160px, 22vw, 280px);
+    width: clamp(140px, 20vw, 250px);
   }
 
   .process-rail {
@@ -866,9 +866,9 @@ a {
     gap: 0.6rem;
   }
 
-  /* Hero breathing room on mobile */
+  /* Hero breathing room on mobile — account for sticky header (h-14 = 3.5rem) */
   .hero-overlay-grid {
-    padding-top: clamp(1.5rem, 6vh, 3.5rem);
+    padding-top: clamp(4.5rem, 14vh, 7rem);
     padding-bottom: 6rem;
     align-items: flex-start;
   }
@@ -901,45 +901,45 @@ a {
 
   .orbit-menu {
     top: 50%;
-    width: min(99vw, 800px);
-    height: min(88vh, 720px);
+    width: min(100vw, 800px);
+    height: min(95vh, 760px);
   }
 
   .orbit-core {
-    width: clamp(120px, 26vw, 200px);
+    width: clamp(100px, 22vw, 170px);
   }
 
   .orbit-node {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
   }
 
   .orbit-node__dot {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
 
   .orbit-node__pulse {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
   }
 
   .orbit-node__name {
-    font-size: 0.95rem;
-    margin-top: 7px;
+    font-size: 0.85rem;
+    margin-top: 6px;
   }
 
   .orbit-node__label {
-    font-size: 1.15rem;
+    font-size: 1.05rem;
   }
 
   .orbit-node__desc {
-    font-size: 0.9rem;
+    font-size: 0.82rem;
   }
 
   .orbit-node__popup {
-    width: clamp(200px, 44vw, 300px);
-    padding: 0.85rem 1.1rem;
+    width: clamp(180px, 42vw, 280px);
+    padding: 0.75rem 1rem;
   }
 
   .metric-grid {
@@ -979,47 +979,47 @@ a {
 
 @media (max-width: 520px) {
   .orbit-menu {
-    top: 48%;
-    width: 99vw;
-    height: min(90vh, 640px);
+    top: 50%;
+    width: 100vw;
+    height: min(94vh, 680px);
   }
 
   .orbit-core {
-    width: clamp(90px, 26vw, 150px);
+    width: clamp(70px, 20vw, 120px);
   }
 
   .orbit-node {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
   }
 
   .orbit-node__dot {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 
   .orbit-node__pulse {
-    width: 30px;
-    height: 30px;
+    width: 26px;
+    height: 26px;
   }
 
   .orbit-node__name {
-    font-size: 0.8rem;
-    margin-top: 5px;
+    font-size: 0.72rem;
+    margin-top: 4px;
   }
 
   .orbit-node__popup {
-    width: clamp(180px, 48vw, 260px);
-    padding: 0.7rem 0.9rem;
-    font-size: 0.85rem;
+    width: clamp(160px, 46vw, 240px);
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
   }
 
   .orbit-node__label {
-    font-size: 1rem;
+    font-size: 0.92rem;
   }
 
   .orbit-node__desc {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
   }
 }
 
