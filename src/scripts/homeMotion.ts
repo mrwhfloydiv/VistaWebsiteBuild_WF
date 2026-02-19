@@ -282,6 +282,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   const mobilePopupCard = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__card") ?? null;
   const lightspeedSection = document.getElementById("lightspeedCta");
   const lightspeedContent = document.getElementById("lightspeedContent");
+  const siteHeader = document.getElementById("siteHeader");
 
   if (!canvas || !slides.length) return () => {};
 
@@ -1955,6 +1956,10 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     if (lightspeedContent) {
       const contentFade = smoothstep(0.88, 0.98, lightspeedWarp);
       lightspeedContent.style.opacity = `${contentFade}`;
+    }
+    // Header switches to white theme when screen goes white
+    if (siteHeader) {
+      siteHeader.classList.toggle("is-lightspeed-white", lsFullWhite);
     }
 
     // Planet glow on main canvas (fades with scroll exit)

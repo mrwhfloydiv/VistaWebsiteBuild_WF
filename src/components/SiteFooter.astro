@@ -19,24 +19,14 @@ const navLinks = [
     <!-- Column 1: Logo + Tagline -->
     <div class="footer-brand">
       <img
-        src={withBase("/logos/vista-logo-black.png")}
+        src={withBase("/logos/vista-logo-black-red.png")}
         alt="Vista Site Selection"
         class="footer-logo"
       />
       <p class="footer-tagline">Data. Analytics. Incentives.</p>
     </div>
 
-    <!-- Column 2: Navigation -->
-    <nav class="footer-nav" aria-label="Footer navigation">
-      <h4 class="footer-heading">Navigate</h4>
-      <ul>
-        {navLinks.map(link => (
-          <li><a href={withBase(link.href)}>{link.label}</a></li>
-        ))}
-      </ul>
-    </nav>
-
-    <!-- Column 3: Contact -->
+    <!-- Column 2: Contact -->
     <div class="footer-contact">
       <h4 class="footer-heading">Contact</h4>
       <address>

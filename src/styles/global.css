@@ -82,6 +82,37 @@ a {
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* White header when lightspeed flash has completed */
+.site-header.is-lightspeed-white {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(20, 25, 28, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background 0.4s ease, border-color 0.4s ease;
+}
+/* Logo swap: dark logo hidden by default, shown in white mode */
+.header-logo-dark  { display: none; }
+.site-header.is-lightspeed-white .header-logo-white { display: none; }
+.site-header.is-lightspeed-white .header-logo-dark  { display: block; }
+.site-header.is-lightspeed-white .header-nav-link {
+  color: rgba(20, 25, 28, 0.7);
+  border-color: rgba(20, 25, 28, 0.12);
+  background: rgba(20, 25, 28, 0.03);
+}
+.site-header.is-lightspeed-white .header-nav-link:hover,
+.site-header.is-lightspeed-white .header-nav-link:focus-visible {
+  color: #14191c;
+  border-color: rgba(178, 44, 46, 0.4);
+}
+.site-header.is-lightspeed-white .header-nav-link--active {
+  background: var(--vista-red);
+  border-color: var(--vista-red);
+  color: #fff;
+}
+.site-header.is-lightspeed-white .mobile-menu-btn__line {
+  background: #14191c;
+}
+
 /* ── Desktop nav links ── */
 .header-nav-link {
   display: inline-flex;
@@ -703,7 +734,7 @@ a {
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.2fr 1fr;
+  grid-template-columns: 2fr 1.2fr 1fr;
   gap: 2.5rem;
   padding-bottom: 2.5rem;
 }
