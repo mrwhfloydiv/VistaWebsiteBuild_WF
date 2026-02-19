@@ -80,8 +80,8 @@ const defaultConfig: MotionConfig = {
     magneticScale: 1.02
   },
   stars: {
-    desktopCount: 860,
-    mobileCount: 300,
+    desktopCount: 1400,
+    mobileCount: 400,
     depth: 1600,
     baseSpeed: 0.28,
     warpBoost: 5.1
@@ -885,8 +885,13 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
 
   const rebuildStars = () => {
     const configuredCount = isMobile ? config.stars.mobileCount : config.stars.desktopCount;
+    // Scale star count with viewport area — big screens get proportionally more stars
+    const viewportArea = width * height;
+    const referenceArea = 1920 * 1080; // standard 1080p baseline
+    const areaScale = Math.max(1, Math.sqrt(viewportArea / referenceArea));
     const powerMultiplier = lowPowerDevice ? 0.62 : 1;
-    const finalCount = Math.max(220, Math.round(configuredCount * powerMultiplier));
+    const scaledCount = Math.round(configuredCount * areaScale * powerMultiplier);
+    const finalCount = Math.max(220, Math.min(scaledCount, 4000)); // cap at 4000 for perf
     spread = Math.max(width, height) * 1.55;
     stars = createStars(finalCount, config.stars.depth, spread);
   };
@@ -1491,6 +1496,9 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     // Combined warp for streak rendering (either intro warp or lightspeed warp)
     const totalWarp = Math.max(warpStrength, lightspeedWarp);
 
+    // Scale visuals with viewport so stars/streaks aren't tiny on large screens
+    const viewScale = Math.max(1, Math.sqrt(Math.max(width, height) / 1920));
+
     for (const star of stars) {
       star.z -= speed * delta * (8 + star.size * 4);
 
@@ -1517,7 +1525,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
         (1 - depthMix) * 0.14
       );
       const alpha = clamp(0.12 + depthMix * 0.86 + totalWarp * 0.08, 0, 1);
-      const radius = clamp(star.size * (0.45 + depthMix * 1.9), 0.35, 3.2);
+      const radius = clamp(star.size * (0.45 + depthMix * 1.9) * viewScale, 0.35, 4.5);
 
       // Warp streaks — from either intro warp or lightspeed warp
       if (totalWarp > 0.07 && star.initialized && !reduceMotion) {
@@ -1528,10 +1536,10 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
           const nx = dx / dist;
           const ny = dy / dist;
-          const sLen = 5 + lightspeedWarp * (55 + depthMix * 85);
+          const sLen = (5 + lightspeedWarp * (55 + depthMix * 85)) * viewScale;
           const streakAlpha = alpha * clamp(lightspeedWarp * 1.1, 0, 0.95);
           context.strokeStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${streakAlpha})`;
-          context.lineWidth = clamp(radius * 0.7, 0.3, 2.0);
+          context.lineWidth = clamp(radius * 0.7, 0.3, 3.0);
           context.beginPath();
           context.moveTo(sx, sy);
           context.lineTo(sx - nx * sLen, sy - ny * sLen);
@@ -1926,8 +1934,11 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       if (lsScrollRange > 0) {
         const lsScrolled = -lsRect.top;
         const lsProgress = clamp(lsScrolled / lsScrollRange, 0, 1);
-        // Warp: ramp through 160vh section — completes before sticky un-pins
-        lightspeedWarp = smoothstep(0.05, 0.82, lsProgress);
+        // Warp: slow buildup through 260vh section — stars gather speed, then flash
+        // 0–30%: gentle acceleration (stars start getting tails)
+        // 30–70%: full warp streaks radiating outward
+        // 70–90%: white flash builds from center
+        lightspeedWarp = smoothstep(0.03, 0.88, lsProgress);
       }
     }
 
