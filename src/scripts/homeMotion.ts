@@ -274,6 +274,11 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   const orbitNodes = Array.from(document.querySelectorAll<HTMLElement>("[data-orbit-node]"));
   const slides = Array.from(document.querySelectorAll<HTMLElement>("[data-slide]"));
   const skipIntroButton = document.getElementById("skipIntroBtn") as HTMLButtonElement | null;
+  const scrollIndicator = document.getElementById("scrollDownIndicator");
+  const mobilePopupOverlay = document.getElementById("mobilePopupOverlay");
+  const mobilePopupLabel = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__label") ?? null;
+  const mobilePopupDesc = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__desc") ?? null;
+  const mobilePopupCard = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__card") ?? null;
 
   if (!canvas || !slides.length) return () => {};
 
@@ -329,6 +334,12 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   let touchStartX = 0;
   let touchStartY = 0;
 
+  // Tap-to-center animation state (mobile)
+  let targetSpinOffset: number | null = null;
+  let centeringStartTime = 0;
+  let centeringDuration = 500; // ms
+  let centeringStartOffset = 0;
+  let pendingExpandIndex: number | null = null;
 
   // Mouse drag state
   let isMouseDragging = false;
@@ -1674,6 +1685,37 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       if (Math.abs(touchTiltOffset) < 0.001) touchTiltOffset = 0;
     }
 
+    // ── Tap-to-center animation (mobile) ──
+    if (targetSpinOffset !== null) {
+      const elapsed = now - centeringStartTime;
+      const t = clamp(elapsed / centeringDuration, 0, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      touchSpinOffset = centeringStartOffset + (targetSpinOffset - centeringStartOffset) * eased;
+      touchSpinVelocity = 0;
+
+      if (t >= 1) {
+        touchSpinOffset = targetSpinOffset;
+        targetSpinOffset = null;
+
+        // Show the expanded node + mobile popup overlay
+        if (pendingExpandIndex !== null) {
+          const idx = pendingExpandIndex;
+          pendingExpandIndex = null;
+          orbitNodes.forEach(n => n.classList.remove("is-expanded"));
+          orbitNodes[idx].classList.add("is-expanded");
+
+          if (mobilePopupOverlay && mobilePopupLabel && mobilePopupDesc && mobilePopupCard) {
+            const { accent, desc } = nodeAccents[idx];
+            mobilePopupLabel.textContent = orbitNodes[idx].getAttribute("aria-label") || "";
+            mobilePopupDesc.textContent = desc;
+            mobilePopupCard.style.setProperty("--node-accent", accent);
+            mobilePopupOverlay.classList.add("is-visible");
+            mobilePopupOverlay.dataset.href = orbitNodes[idx].getAttribute("href") || "";
+          }
+        }
+      }
+    }
+
     // slideWindow = the scroll range for all 4 titles.
     // The LAST slide stays in its hold until introOpacity fades the panel,
     // so slideWindow should extend to where introOpacity ≈ 0.
@@ -1771,6 +1813,13 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     }
     wrapper.classList.toggle("is-orbit-phase", orbitPhase && !orbitExiting);
 
+    // ── Scroll-down indicator: fade in when orbit fully visible, fade out near exit ──
+    if (scrollIndicator) {
+      const indicatorShow = smoothstep(0.90, 0.98, orbitReveal);
+      const indicatorHide = smoothstep(0.96, 1.0, scrollProgress);
+      scrollIndicator.style.opacity = `${indicatorShow * (1 - indicatorHide)}`;
+    }
+
     // ── Single opacity driver for the entire hero intro panel ──
     // The intro panel (chip + slide titles + description + buttons + badges)
     // has ONE driver: fade out as orbit reveals. Nothing else touches it.
@@ -1844,6 +1893,12 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
 
     if (!isTouchDragging && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
       isTouchDragging = true;
+      // Cancel any in-progress centering animation on drag
+      if (targetSpinOffset !== null) {
+        targetSpinOffset = null;
+        pendingExpandIndex = null;
+        mobilePopupOverlay?.classList.remove("is-visible");
+      }
     }
 
     if (isTouchDragging) {
@@ -1897,32 +1952,71 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   };
 
   // Tap-to-expand on touch devices:
-  // 1st tap on node → show popup (prevent navigation)
-  // 2nd tap on popup → navigate to page
-  // Tap elsewhere → close popup
+  // Mobile: tap → center the node via orbit rotation → show overlay popup
+  // Desktop/narrow: tap → immediate expand (original behavior)
   const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
   if (isTouchDevice) {
-    orbitNodes.forEach(node => {
+    orbitNodes.forEach((node, nodeIndex) => {
       node.addEventListener("click", (e) => {
+        // If already expanded and tapping the popup area → navigate
         const clickedPopup = (e.target as HTMLElement).closest(".orbit-node__popup");
         if (node.classList.contains("is-expanded") && clickedPopup) {
-          // Second tap on the popup → allow navigation (don't prevent default)
-          return;
+          return; // allow navigation
         }
-        // First tap or tap on dot → expand and show popup
+
         e.preventDefault();
         orbitNodes.forEach(n => n.classList.remove("is-expanded"));
-        node.classList.add("is-expanded");
+        mobilePopupOverlay?.classList.remove("is-visible");
+
+        if (isMobile && width >= 340) {
+          // ── Mobile: compute target spin offset to center this node at front ──
+          const ringIdx = nodeRingAssignments[nodeIndex];
+          const ringCfg = config.orbit.rings[ringIdx];
+          const nowSeconds = performance.now() * 0.001;
+
+          // Current angle of this node (before centering)
+          const currentBaseSpin = computeBaseSpin(nowSeconds, ringCfg.speedMultiplier);
+          const currentAngle = orbitAngles[nodeIndex] + currentBaseSpin + ringCfg.tiltOffset;
+
+          // Target: π/2 = bottom of ellipse (front-center, closest to viewer)
+          const TARGET_ANGLE = Math.PI / 2;
+          let angleDelta = TARGET_ANGLE - currentAngle;
+          // Normalize to [-π, π] for shortest rotation path
+          angleDelta = angleDelta - Math.round(angleDelta / (2 * Math.PI)) * (2 * Math.PI);
+
+          // touchSpinOffset is multiplied by speedMultiplier in computeBaseSpin,
+          // so divide the delta by speedMultiplier to get the correct offset
+          targetSpinOffset = touchSpinOffset + angleDelta / ringCfg.speedMultiplier;
+          centeringStartOffset = touchSpinOffset;
+          centeringStartTime = performance.now();
+          centeringDuration = 500;
+          pendingExpandIndex = nodeIndex;
+          touchSpinVelocity = 0;
+        } else {
+          // Desktop or narrow-stack: immediate expand (no centering)
+          node.classList.add("is-expanded");
+        }
       });
     });
 
-    // Tap on orbit background → close any expanded node
+    // Tap on orbit background → close any expanded node + hide overlay
     if (orbitMenu) {
       orbitMenu.addEventListener("click", (e) => {
         const clickedNode = (e.target as HTMLElement).closest(".orbit-node");
         if (!clickedNode) {
           orbitNodes.forEach(n => n.classList.remove("is-expanded"));
+          mobilePopupOverlay?.classList.remove("is-visible");
+          targetSpinOffset = null;
+          pendingExpandIndex = null;
         }
+      });
+    }
+
+    // Mobile overlay tap → navigate to the team page
+    if (mobilePopupOverlay) {
+      mobilePopupOverlay.addEventListener("click", () => {
+        const href = mobilePopupOverlay.dataset.href;
+        if (href) window.location.href = href;
       });
     }
   }

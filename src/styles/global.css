@@ -823,6 +823,47 @@ a {
   background: rgba(250, 250, 250, 0.04);
 }
 
+/* ── Scroll-down indicator (orbit phase) ── */
+.scroll-down-indicator {
+  position: absolute;
+  bottom: clamp(1.5rem, 4vh, 3rem);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.scroll-down-indicator__text {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(250, 250, 250, 0.5);
+}
+
+.scroll-down-indicator__chevron {
+  width: 20px;
+  height: 20px;
+  color: rgba(250, 250, 250, 0.45);
+  animation: scroll-chevron-bounce 2s ease-in-out infinite;
+}
+
+@keyframes scroll-chevron-bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.45; }
+  50% { transform: translateY(6px); opacity: 0.8; }
+}
+
+/* ── Mobile popup overlay ── */
+.mobile-popup-overlay {
+  display: none;
+}
+
 .mono {
   font-family: "IBM Plex Mono", monospace;
   letter-spacing: 0.02em;
@@ -1008,6 +1049,75 @@ a {
   .text-4xl { font-size: clamp(1.5rem, 6vw, 2.25rem) !important; }
   .text-3xl { font-size: clamp(1.3rem, 5vw, 1.875rem) !important; }
   .text-2xl { font-size: clamp(1.15rem, 4.5vw, 1.5rem) !important; }
+
+  /* Scroll indicator sizing on phone */
+  .scroll-down-indicator__text { font-size: 0.6rem; }
+  .scroll-down-indicator__chevron { width: 16px; height: 16px; }
+
+  /* ── Mobile popup overlay ── */
+  .mobile-popup-overlay {
+    display: block;
+    position: fixed;
+    bottom: clamp(2rem, 8vh, 4rem);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .mobile-popup-overlay.is-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
+
+  .mobile-popup-overlay__card {
+    position: relative;
+    background: linear-gradient(135deg, rgba(20, 30, 55, 0.97), rgba(16, 24, 45, 0.95));
+    border: 1px solid rgba(180, 210, 255, 0.25);
+    border-left: 3px solid var(--node-accent, rgba(180, 210, 255, 0.8));
+    padding: 1rem 1.2rem;
+    width: clamp(240px, 80vw, 360px);
+    border-radius: 12px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(100, 160, 255, 0.06);
+  }
+
+  .mobile-popup-overlay__label {
+    display: block;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgba(250, 250, 250, 0.95);
+    text-transform: uppercase;
+  }
+
+  .mobile-popup-overlay__desc {
+    display: block;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: rgba(250, 250, 250, 0.72);
+    margin-top: 0.3rem;
+  }
+
+  .mobile-popup-overlay__cta {
+    display: block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(250, 250, 250, 0.4);
+    margin-top: 0.6rem;
+  }
+
+  /* Hide original in-node popup on mobile when using overlay */
+  .orbit-node.is-expanded .orbit-node__popup {
+    display: none !important;
+  }
 }
 
 @media (max-width: 520px) {
