@@ -55,7 +55,7 @@ a {
 
 .section-shell {
   margin: 0 auto;
-  width: min(1200px, calc(100% - clamp(1.25rem, 4vw, 2.5rem)));
+  width: min(1200px, calc(100% - clamp(2rem, 6vw, 2.5rem)));
 }
 
 .site-header {
@@ -866,11 +866,11 @@ a {
     gap: 0.6rem;
   }
 
-  /* Hero breathing room on mobile — enough vertical space to not feel cluttered */
+  /* Hero on mobile — keep vertically centered, generous side breathing room */
   .hero-overlay-grid {
-    padding-top: clamp(4rem, 10vh, 6rem);
-    padding-bottom: 2.5rem;
-    align-items: flex-start;
+    padding-top: 0;
+    padding-bottom: 0;
+    align-items: center;
   }
 
   .hero-stack {
