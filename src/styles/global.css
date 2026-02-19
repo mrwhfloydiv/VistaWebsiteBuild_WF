@@ -169,7 +169,7 @@ a {
   display: none;
   overflow: hidden;
   max-height: 0;
-  background: rgb(5, 8, 11);
+  background: #000;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 8px 48px rgba(0, 0, 0, 0.6);
   transition: max-height 0.55s cubic-bezier(0.16, 1, 0.3, 1);
