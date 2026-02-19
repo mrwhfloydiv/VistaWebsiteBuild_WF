@@ -786,16 +786,20 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     const t = scaled - activeIndex;
     const dist = getLineDist();
 
-    // Entry offset: OPPOSITE of travel direction (back toward vanishing pt)
-    const entryTx = -LINE_DX * dist.entry; // positive X (rightward, toward center)
-    const entryTy = -LINE_DY * dist.entry; // positive Y (slightly down)
+    /*
+     * WARP-SPEED TEXT TRANSITIONS
+     * ────────────────────────────
+     * Exit:  text stretches horizontally (scaleX ramps to 4-6x),
+     *        gets a motion blur, and fades out — like jumping to hyperspace.
+     * Enter: text snaps in from a horizontal streak, decompresses to normal.
+     * Hold:  text sits perfectly readable at scale(1).
+     */
 
-    // Exit offset: SAME as travel direction (past reading pos)
-    const exitTx = LINE_DX * dist.exit;    // negative X (leftward)
-    const exitTy = LINE_DY * dist.exit;    // negative Y (slightly up)
-
-    // Unified easing for all slides
     const ease = (x: number) => x * x * (3 - 2 * x); // smoothstep
+    // Power curve: accelerates hard at the end (warp punch)
+    const warpOut = (x: number) => x * x * x;
+    // Inverse: decelerates from warp (snap-in feel)
+    const warpIn = (x: number) => 1 - Math.pow(1 - x, 3);
 
     slides.forEach((slide, index) => {
       const isHero = index === 0;
@@ -804,64 +808,69 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
       if (index === activeIndex) {
         slide.classList.add("is-active");
 
-        const flyInEnd = 0.18;
-        const holdEnd = 0.72;
+        const warpInEnd = 0.14;   // 14% of slide time for warp-in
+        const holdEnd = 0.76;      // 76% hold
         let opacity: number;
         let tx: number;
         let ty: number;
-        let scale: number;
+        let scaleX: number;
+        let scaleY: number;
+        let blur: number;
 
         if (isHero) {
-          // ── SLIDE 0: Visible on load, flies OUT along 290° line (same path as others) ──
+          // ── SLIDE 0: Visible on load, warps OUT ──
           if (t < holdEnd) {
-            opacity = 1;
-            tx = 0;
-            ty = 0;
-            scale = 1;
+            opacity = 1; tx = 0; ty = 0;
+            scaleX = 1; scaleY = 1; blur = 0;
           } else {
             const ft = (t - holdEnd) / (1.0 - holdEnd);
-            const eased = ease(ft);
-            opacity = clamp(1 - ft * 2.2, 0, 1);
-            tx = exitTx * eased;
-            ty = exitTy * eased;
-            scale = 1; // no scale change — just slides along the line like the others
+            const w = warpOut(ft);
+            opacity = clamp(1 - ft * 1.8, 0, 1);
+            tx = -width * 0.3 * w;
+            ty = 0;
+            scaleX = lerp(1.0, 5.0, w);  // horizontal stretch
+            scaleY = lerp(1.0, 0.4, w);  // vertical squeeze
+            blur = w * 20;                // motion blur
           }
-        } else if (t < flyInEnd) {
-          // ── FLY-IN: from vanishing point → reading position ──
-          const at = t / flyInEnd;
-          const eased = ease(at);
-          opacity = clamp(eased * 1.3, 0, 1);
-          scale = lerp(0.3, 1.0, eased);
-          tx = lerp(entryTx, 0, eased);
-          ty = lerp(entryTy, 0, eased);
-        } else if (t < holdEnd || isLastSlide) {
-          // ── HOLD: fully readable at reading position ──
-          opacity = 1;
-          tx = 0;
+        } else if (t < warpInEnd) {
+          // ── WARP-IN: text decompresses from horizontal streak ──
+          const at = t / warpInEnd;
+          const w = warpIn(at);
+          opacity = clamp(w * 1.5, 0, 1);
+          tx = lerp(width * 0.25, 0, w);
           ty = 0;
-          scale = 1;
+          scaleX = lerp(4.0, 1.0, w);   // decompress from stretch
+          scaleY = lerp(0.4, 1.0, w);   // restore height
+          blur = (1 - w) * 16;           // blur clears as it arrives
+        } else if (t < holdEnd || isLastSlide) {
+          // ── HOLD: perfectly readable ──
+          opacity = 1; tx = 0; ty = 0;
+          scaleX = 1; scaleY = 1; blur = 0;
         } else {
-          // ── FLY-OUT: continues along same line past camera ──
+          // ── WARP-OUT: text stretches and streaks away ──
           const ft = (t - holdEnd) / (1.0 - holdEnd);
-          const eased = ease(ft);
-          opacity = clamp(1 - ft * 2.2, 0, 1);
-          tx = exitTx * eased;
-          ty = exitTy * eased;
-          scale = lerp(1.0, 2.8, eased);
+          const w = warpOut(ft);
+          opacity = clamp(1 - ft * 1.8, 0, 1);
+          tx = -width * 0.3 * w;
+          ty = 0;
+          scaleX = lerp(1.0, 5.0, w);
+          scaleY = lerp(1.0, 0.4, w);
+          blur = w * 20;
         }
 
-        const scaleExcess = Math.max(0, scale - 1);
-        const scaleCompX = -scaleExcess * width * 0.18;
-        const scaleCompY = -scaleExcess * 8;
-        slide.style.transform = `translate(${(tx + scaleCompX).toFixed(1)}px, ${(ty + scaleCompY).toFixed(1)}px) scale(${scale.toFixed(3)})`;
+        slide.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})`;
         slide.style.opacity = `${opacity.toFixed(3)}`;
+        slide.style.filter = blur > 0.5 ? `blur(${blur.toFixed(1)}px)` : "none";
       } else {
         slide.classList.remove("is-active");
         slide.style.opacity = "0";
+        slide.style.filter = "none";
         if (index < activeIndex) {
-          slide.style.transform = `translate(${exitTx.toFixed(1)}px, ${exitTy.toFixed(1)}px) scale(2.8)`;
+          // Already warped out — parked streaked left
+          slide.style.transform = `translate(${(-width * 0.3).toFixed(1)}px, 0px) scale(5, 0.4)`;
         } else {
-          slide.style.transform = `translate(${entryTx.toFixed(1)}px, ${entryTy.toFixed(1)}px) scale(0.3)`;
+          // Not yet visible — parked as incoming streak
+          slide.style.transform = `translate(${(width * 0.25).toFixed(1)}px, 0px) scale(4, 0.4)`;
         }
       }
     });

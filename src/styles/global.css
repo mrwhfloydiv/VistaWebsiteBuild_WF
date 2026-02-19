@@ -877,8 +877,8 @@ a {
   opacity: 0;
   pointer-events: none;
   /* Transform is driven entirely by JS for fly-through effect */
-  will-change: transform, opacity;
-  /* Scale grows from left-center so text expands toward upper-left naturally */
+  will-change: transform, opacity, filter;
+  /* Warp stretches from left-center */
   transform-origin: left center;
 }
 
