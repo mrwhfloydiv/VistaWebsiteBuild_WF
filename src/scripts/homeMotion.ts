@@ -2219,8 +2219,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   }
 
   window.addEventListener("resize", resize);
-  wrapper.addEventListener("pointermove", pointerMove, { passive: true });
-  wrapper.addEventListener("pointerleave", pointerLeave, { passive: true });
+  window.addEventListener("pointermove", pointerMove, { passive: true });
+  document.documentElement.addEventListener("pointerleave", pointerLeave, { passive: true });
   if (skipIntroButton) {
     skipIntroButton.addEventListener("click", scrollToOrbit);
   }
@@ -2262,8 +2262,8 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
 
   return () => {
     window.removeEventListener("resize", resize);
-    wrapper.removeEventListener("pointermove", pointerMove);
-    wrapper.removeEventListener("pointerleave", pointerLeave);
+    window.removeEventListener("pointermove", pointerMove);
+    document.documentElement.removeEventListener("pointerleave", pointerLeave);
     if (skipIntroButton) {
       skipIntroButton.removeEventListener("click", scrollToOrbit);
     }
@@ -2479,7 +2479,7 @@ const initProcessCardMouseEffects = (): (() => void) => {
   return () => { cleanups.forEach((fn) => fn()); };
 };
 
-/** Metric tiles — dramatic entrance with blur, scale, stagger + parallax drift */
+/** Metric tiles — gentle scroll-scrubbed reveal: fade + slide up tied to scroll position */
 const initMetricScrollEffects = (): (() => void) => {
   const section = document.getElementById("metricSection");
   if (!section) return () => {};
@@ -2491,8 +2491,6 @@ const initMetricScrollEffects = (): (() => void) => {
   const sub = header?.querySelector<HTMLElement>(".metric-header__sub");
   if (!tiles.length) return () => {};
 
-  const isMobile = window.innerWidth <= 760;
-
   // Set --tile-accent CSS var from data-accent
   tiles.forEach((tile) => {
     const accent = tile.dataset.accent;
@@ -2502,127 +2500,44 @@ const initMetricScrollEffects = (): (() => void) => {
   const allTriggers: ScrollTrigger[] = [];
   const allTimelines: gsap.core.Timeline[] = [];
 
-  // ── Header entrance: chip snaps, title slides, sub fades ──
+  // ── Header entrance — smooth fade tied to scroll ──
   if (header) {
     const headerTl = gsap.timeline({
       scrollTrigger: {
         trigger: section,
-        start: "top 88%",
-        toggleActions: "play none none reverse",
+        start: "top 85%",
+        end: "top 55%",
+        scrub: 0.6,
       },
     });
     allTimelines.push(headerTl);
     if (headerTl.scrollTrigger) allTriggers.push(headerTl.scrollTrigger);
 
     if (chip) {
-      headerTl.fromTo(
-        chip,
-        { opacity: 0, scale: 0.6, y: 20 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(2.5)" },
-        0
-      );
+      headerTl.fromTo(chip, { opacity: 0, y: 16 }, { opacity: 1, y: 0 }, 0);
     }
     if (heading) {
-      headerTl.fromTo(
-        heading,
-        { opacity: 0, y: 50, clipPath: "inset(0 0 100% 0)" },
-        { opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)", duration: 0.8, ease: "power4.out" },
-        0.15
-      );
+      headerTl.fromTo(heading, { opacity: 0, y: 24 }, { opacity: 1, y: 0 }, 0.05);
     }
     if (sub) {
-      headerTl.fromTo(
-        sub,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
-        0.35
-      );
+      headerTl.fromTo(sub, { opacity: 0, y: 16 }, { opacity: 1, y: 0 }, 0.15);
     }
   }
 
-  // ── Tile entrance — DRAMATIC staggered reveal ──
-  // Desktop: tiles slide up from below with rotation + scale pop + blur clear
-  // Mobile: tiles shoot up with rotation kick + scale bounce
+  // ── Tile entrance — each tile fades up smoothly as you scroll ──
   tiles.forEach((tile, i) => {
-    const delay = i * 0.12;
-    const isEven = i % 2 === 0;
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: tile,
+        start: "top 92%",
+        end: "top 65%",
+        scrub: 0.5,
+      },
+    });
+    allTimelines.push(tl);
+    if (tl.scrollTrigger) allTriggers.push(tl.scrollTrigger);
 
-    if (isMobile) {
-      // Mobile: explosive entrance with slight rotation alternation
-      const tween = gsap.fromTo(
-        tile,
-        {
-          opacity: 0,
-          y: 80,
-          scale: 0.85,
-          rotation: isEven ? -3 : 3,
-        },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          rotation: 0,
-          duration: 0.7,
-          ease: "back.out(1.7)",
-          scrollTrigger: {
-            trigger: tile,
-            start: "top 92%",
-            toggleActions: "play none none reverse",
-          },
-        }
-      );
-      if (tween.scrollTrigger) allTriggers.push(tween.scrollTrigger);
-    } else {
-      // Desktop: dramatic staggered entrance with individual triggers
-      const tween = gsap.fromTo(
-        tile,
-        {
-          opacity: 0,
-          y: 100 + i * 15,
-          scale: 0.8,
-          rotateX: 8,
-          filter: "blur(8px)",
-        },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          rotateX: 0,
-          filter: "blur(0px)",
-          duration: 0.9,
-          delay,
-          ease: "back.out(1.4)",
-          scrollTrigger: {
-            trigger: section,
-            start: "top 78%",
-            toggleActions: "play none none reverse",
-          },
-        }
-      );
-      if (tween.scrollTrigger) allTriggers.push(tween.scrollTrigger);
-    }
-  });
-
-  // ── Icon pop — each icon does a little bounce after tile lands ──
-  const icons = Array.from(section.querySelectorAll<HTMLElement>(".metric-tile__icon"));
-  icons.forEach((icon, i) => {
-    const tween = gsap.fromTo(
-      icon,
-      { scale: 0, rotation: -45 },
-      {
-        scale: 1,
-        rotation: 0,
-        duration: 0.5,
-        ease: "back.out(3)",
-        scrollTrigger: {
-          trigger: tiles[i] || section,
-          start: isMobile ? "top 88%" : "top 75%",
-          toggleActions: "play none none reverse",
-        },
-        delay: isMobile ? 0.25 : 0.3 + i * 0.12,
-      }
-    );
-    if (tween.scrollTrigger) allTriggers.push(tween.scrollTrigger);
+    tl.fromTo(tile, { opacity: 0, y: 40 }, { opacity: 1, y: 0 }, 0);
   });
 
   return () => {
@@ -2631,20 +2546,19 @@ const initMetricScrollEffects = (): (() => void) => {
   };
 };
 
-/** Process timeline — scroll-driven line + dot activation + step entrance + number color sweep */
+/** Process cards — gentle scroll-scrubbed reveal: fade + slide up tied to scroll position */
 const initTimelineScrollEffects = (): (() => void) => {
   const section = document.getElementById("processSection");
   const processHeader = section?.querySelector<HTMLElement>(".process-header");
   if (!section) return () => {};
 
-  const isMobile = window.innerWidth <= 760;
   const cards = Array.from(section.querySelectorAll<HTMLElement>(".process-card"));
   if (!cards.length) return () => {};
 
   const allTriggers: ScrollTrigger[] = [];
   const allTimelines: gsap.core.Timeline[] = [];
 
-  // ── Process header entrance — chip pops, title clip-reveals, sub fades ──
+  // ── Process header entrance — smooth fade tied to scroll ──
   if (processHeader) {
     const pChip = processHeader.querySelector<HTMLElement>(".chip");
     const pHeading = processHeader.querySelector<HTMLElement>("h2");
@@ -2653,170 +2567,60 @@ const initTimelineScrollEffects = (): (() => void) => {
     const headerTl = gsap.timeline({
       scrollTrigger: {
         trigger: section,
-        start: "top 88%",
-        toggleActions: "play none none reverse",
+        start: "top 85%",
+        end: "top 55%",
+        scrub: 0.6,
       },
     });
     allTimelines.push(headerTl);
     if (headerTl.scrollTrigger) allTriggers.push(headerTl.scrollTrigger);
 
     if (pChip) {
-      headerTl.fromTo(
-        pChip,
-        { opacity: 0, scale: 0.5, y: 25 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(2.5)" },
-        0
-      );
+      headerTl.fromTo(pChip, { opacity: 0, y: 16 }, { opacity: 1, y: 0 }, 0);
     }
     if (pHeading) {
-      headerTl.fromTo(
-        pHeading,
-        { opacity: 0, y: 50, clipPath: "inset(0 0 100% 0)" },
-        { opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)", duration: 0.8, ease: "power4.out" },
-        0.15
-      );
+      headerTl.fromTo(pHeading, { opacity: 0, y: 24 }, { opacity: 1, y: 0 }, 0.05);
     }
     if (pSub) {
-      headerTl.fromTo(
-        pSub,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
-        0.35
-      );
+      headerTl.fromTo(pSub, { opacity: 0, y: 16 }, { opacity: 1, y: 0 }, 0.15);
     }
   }
 
-  // ── Stacking card activation — each card activates when it reaches its sticky position ──
+  // ── Each card fades up smoothly as it enters the viewport ──
   cards.forEach((card, i) => {
-    const num = card.querySelector<HTMLElement>(".process-card__num");
-    const title = card.querySelector<HTMLElement>(".process-card__title");
-    const desc = card.querySelector<HTMLElement>(".process-card__desc");
-    const tag = card.querySelector<HTMLElement>(".process-card__tag");
-    const icon = card.querySelector<HTMLElement>(".process-card__icon");
-    const accentLine = card.querySelector<HTMLElement>(".process-card__accent-line");
-
-    if (isMobile) {
-      // Mobile: cards enter with alternating slide + rotation + scale bounce
-      const isEven = i % 2 === 0;
-      const cardTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: card,
-          start: "top 92%",
-          toggleActions: "play none none reverse",
-        },
-      });
-      allTimelines.push(cardTl);
-      if (cardTl.scrollTrigger) allTriggers.push(cardTl.scrollTrigger);
-
-      // Card body entrance — rotation + slide from alternating side
-      cardTl.fromTo(
-        card,
-        { opacity: 0, x: isEven ? -50 : 50, y: 30, rotation: isEven ? -3 : 3, scale: 0.88 },
-        {
-          opacity: 1, x: 0, y: 0, rotation: 0, scale: 1,
-          duration: 0.65, ease: "back.out(1.6)",
-          onComplete: () => card.classList.add("is-active"),
-        },
-        0
-      );
-
-      // Number slams in
-      if (num) {
-        cardTl.fromTo(
-          num,
-          { scale: 2.5, opacity: 0 },
-          { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(2.5)" },
-          0.15
-        );
-      }
-
-      // Title wipes
-      if (title) {
-        cardTl.fromTo(
-          title,
-          { opacity: 0, x: isEven ? -20 : 20 },
-          { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" },
-          0.25
-        );
-      }
-
-      // Desc fades
-      if (desc) {
-        cardTl.fromTo(
-          desc,
-          { opacity: 0, y: 10 },
-          { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
-          0.3
-        );
-      }
-
-      // Tag snaps
-      if (tag) {
-        cardTl.fromTo(
-          tag,
-          { opacity: 0, scale: 0.6 },
-          { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" },
-          0.35
-        );
-      }
-    } else {
-      // Desktop: card entrance — slides up with blur + scale, activates when it becomes "current"
-      const cardTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: card,
-          start: "top 85%",
-          toggleActions: "play none none reverse",
-        },
-      });
-      allTimelines.push(cardTl);
-      if (cardTl.scrollTrigger) allTriggers.push(cardTl.scrollTrigger);
-
-      // Card entrance
-      cardTl.fromTo(
-        card,
-        { opacity: 0, y: 80, scale: 0.92, filter: "blur(8px)" },
-        {
-          opacity: 1, y: 0, scale: 1, filter: "blur(0px)",
-          duration: 0.7, ease: "power3.out",
-        },
-        0
-      );
-
-      // Activation trigger — card activates when it pins at its sticky position
-      const activationTrigger = ScrollTrigger.create({
+    const tl = gsap.timeline({
+      scrollTrigger: {
         trigger: card,
-        start: "top 20%",
-        end: "bottom top",
-        onEnter: () => {
-          // Deactivate all, activate current
-          cards.forEach((c) => c.classList.remove("is-active"));
-          card.classList.add("is-active");
+        start: "top 92%",
+        end: "top 60%",
+        scrub: 0.5,
+      },
+    });
+    allTimelines.push(tl);
+    if (tl.scrollTrigger) allTriggers.push(tl.scrollTrigger);
 
-          // Number pop
-          if (num) {
-            gsap.fromTo(
-              num,
-              { scale: 0.5 },
-              { scale: 1, duration: 0.5, ease: "back.out(3)" }
-            );
-          }
-          // Icon rotate
-          if (icon) {
-            gsap.fromTo(
-              icon,
-              { rotation: -10, scale: 0.8 },
-              { rotation: 0, scale: 1, duration: 0.5, ease: "back.out(2)" }
-            );
-          }
-        },
-        onLeaveBack: () => {
-          card.classList.remove("is-active");
-          // Re-activate previous card
-          if (i > 0) cards[i - 1].classList.add("is-active");
-        },
-      });
-      allTriggers.push(activationTrigger);
-    }
+    tl.fromTo(
+      card,
+      { opacity: 0, y: 40 },
+      { opacity: 1, y: 0, onComplete: () => card.classList.add("is-active") },
+      0
+    );
+
+    // Activation trigger — toggles is-active when card is in prominent viewport position
+    const activationTrigger = ScrollTrigger.create({
+      trigger: card,
+      start: "top 60%",
+      end: "bottom 20%",
+      onEnter: () => {
+        cards.forEach((c) => c.classList.remove("is-active"));
+        card.classList.add("is-active");
+      },
+      onLeaveBack: () => {
+        card.classList.remove("is-active");
+        if (i > 0) cards[i - 1].classList.add("is-active");
+      },
+    });
+    allTriggers.push(activationTrigger);
   });
 
   return () => {
@@ -2920,24 +2724,19 @@ const initDiffCardTilt = (): (() => void) => {
   return () => { cleanups.forEach((fn) => fn()); };
 };
 
-/** Differentiator cards — 3D fan-in with blur, reveal class, parallax drift */
+/** Differentiator cards — gentle scroll-scrubbed reveal: fade + slide up tied to scroll position */
 const initDiffScrollEffects = (): (() => void) => {
   const section = document.getElementById("diffSection");
   if (!section) return () => {};
 
   const cards = Array.from(section.querySelectorAll<HTMLElement>(".diff-card"));
   const header = section.querySelector<HTMLElement>(".diff-header");
-  const numbers = Array.from(section.querySelectorAll<HTMLElement>(".diff-card__number"));
-  const cardTitles = Array.from(section.querySelectorAll<HTMLElement>(".diff-card__title"));
-  const cardTexts = Array.from(section.querySelectorAll<HTMLElement>(".diff-card__text"));
-  const accents = Array.from(section.querySelectorAll<HTMLElement>(".diff-card__accent"));
   if (!cards.length) return () => {};
 
-  const isMobile = window.innerWidth <= 760;
   const allTriggers: ScrollTrigger[] = [];
   const allTimelines: gsap.core.Timeline[] = [];
 
-  // ── Header entrance — chip pops, title clip-reveals, sub fades ──
+  // ── Header entrance — smooth fade tied to scroll ──
   if (header) {
     const dChip = header.querySelector<HTMLElement>(".chip");
     const dHeading = header.querySelector<HTMLElement>("h2");
@@ -2947,192 +2746,44 @@ const initDiffScrollEffects = (): (() => void) => {
       scrollTrigger: {
         trigger: section,
         start: "top 85%",
-        toggleActions: "play none none reverse",
+        end: "top 55%",
+        scrub: 0.6,
       },
     });
     allTimelines.push(headerTl);
     if (headerTl.scrollTrigger) allTriggers.push(headerTl.scrollTrigger);
 
     if (dChip) {
-      headerTl.fromTo(
-        dChip,
-        { opacity: 0, scale: 0.5, y: 25 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(2.5)" },
-        0
-      );
+      headerTl.fromTo(dChip, { opacity: 0, y: 16 }, { opacity: 1, y: 0 }, 0);
     }
     if (dHeading) {
-      headerTl.fromTo(
-        dHeading,
-        { opacity: 0, y: 60, clipPath: "inset(0 0 100% 0)" },
-        { opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)", duration: 0.9, ease: "power4.out" },
-        0.15
-      );
+      headerTl.fromTo(dHeading, { opacity: 0, y: 24 }, { opacity: 1, y: 0 }, 0.05);
     }
     if (dSub) {
-      headerTl.fromTo(
-        dSub,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
-        0.4
-      );
+      headerTl.fromTo(dSub, { opacity: 0, y: 16 }, { opacity: 1, y: 0 }, 0.15);
     }
   }
 
-  // ── Card reveals — fully orchestrated per-card timelines ──
+  // ── Each card fades up smoothly as it enters the viewport ──
   cards.forEach((card, i) => {
-    if (isMobile) {
-      // Mobile: dramatic individual card entrance with internal stagger
-      const cardTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: card,
-          start: "top 92%",
-          toggleActions: "play none none reverse",
-        },
-      });
-      allTimelines.push(cardTl);
-      if (cardTl.scrollTrigger) allTriggers.push(cardTl.scrollTrigger);
-
-      const isEven = i % 2 === 0;
-
-      // Card body: rotation + scale bounce from alternating side
-      cardTl.fromTo(
-        card,
-        { opacity: 0, x: isEven ? -40 : 40, y: 50, rotation: isEven ? -4 : 4, scale: 0.85 },
-        {
-          opacity: 1, x: 0, y: 0, rotation: 0, scale: 1,
-          duration: 0.65, ease: "back.out(1.8)",
-          onComplete: () => card.classList.add("is-revealed"),
-        },
-        0
-      );
-
-      // Number slams in big
-      if (numbers[i]) {
-        cardTl.fromTo(
-          numbers[i],
-          { scale: 2, opacity: 0 },
-          { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(2.5)" },
-          0.15
-        );
-      }
-
-      // Title wipes in
-      if (cardTitles[i]) {
-        cardTl.fromTo(
-          cardTitles[i],
-          { opacity: 0, x: isEven ? -20 : 20 },
-          { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" },
-          0.25
-        );
-      }
-
-      // Text fades
-      if (cardTexts[i]) {
-        cardTl.fromTo(
-          cardTexts[i],
-          { opacity: 0, y: 10 },
-          { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
-          0.35
-        );
-      }
-
-      // Accent bar sweeps down
-      if (accents[i]) {
-        cardTl.fromTo(
-          accents[i],
-          { height: "0%" },
-          { height: "100%", duration: 0.6, ease: "power2.inOut" },
-          0.2
-        );
-      }
-    } else {
-      // Desktop: 3D fan-in — more dramatic than before
-      const offsets = [
-        { x: -80, rotateZ: -6, rotateY: -12, y: 120 },
-        { x: 0, rotateZ: 0, rotateY: 0, y: 100 },
-        { x: 80, rotateZ: 6, rotateY: 12, y: 120 },
-      ];
-      const offset = offsets[i] || offsets[1];
-
-      const cardTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: "top 72%",
-          toggleActions: "play none none reverse",
-        },
-      });
-      allTimelines.push(cardTl);
-      if (cardTl.scrollTrigger) allTriggers.push(cardTl.scrollTrigger);
-
-      // Main card entrance
-      cardTl.fromTo(
-        card,
-        {
-          opacity: 0,
-          y: offset.y,
-          x: offset.x,
-          rotateZ: offset.rotateZ,
-          rotateY: offset.rotateY,
-          scale: 0.75,
-          filter: "blur(10px)",
-        },
-        {
-          opacity: 1,
-          y: 0,
-          x: 0,
-          rotateZ: 0,
-          rotateY: 0,
-          scale: 1,
-          filter: "blur(0px)",
-          duration: 0.9,
-          delay: i * 0.15,
-          ease: "back.out(1.2)",
-          onComplete: () => card.classList.add("is-revealed"),
-        },
-        0
-      );
-
-      // Number scales in with overshoot
-      if (numbers[i]) {
-        cardTl.fromTo(
-          numbers[i],
-          { scale: 2.5, opacity: 0 },
-          { scale: 1, opacity: 1, duration: 0.6, delay: i * 0.15, ease: "back.out(2)" },
-          0.3
-        );
-      }
-
-      // Accent bar sweeps
-      if (accents[i]) {
-        cardTl.fromTo(
-          accents[i],
-          { height: "0%" },
-          { height: "100%", duration: 0.7, delay: i * 0.15, ease: "power2.inOut" },
-          0.4
-        );
-      }
-    }
-  });
-
-  // ── Post-reveal parallax drift (desktop only) ──
-  if (!isMobile) {
-    cards.forEach((card, i) => {
-      const st = ScrollTrigger.create({
-        trigger: section,
-        start: "center center",
-        end: "bottom top",
-        scrub: true,
-        onUpdate: (self) => {
-          if (!card.matches(":hover")) {
-            const drift = self.progress * (-25 + i * 10);
-            card.style.transform = `perspective(800px) rotateX(0deg) rotateY(0deg) translateY(${drift}px)`;
-          }
-        },
-      });
-      allTriggers.push(st);
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: card,
+        start: "top 92%",
+        end: "top 65%",
+        scrub: 0.5,
+      },
     });
-  }
+    allTimelines.push(tl);
+    if (tl.scrollTrigger) allTriggers.push(tl.scrollTrigger);
+
+    tl.fromTo(
+      card,
+      { opacity: 0, y: 40 },
+      { opacity: 1, y: 0, onComplete: () => card.classList.add("is-revealed") },
+      0
+    );
+  });
 
   return () => {
     allTriggers.forEach((st) => st.kill());

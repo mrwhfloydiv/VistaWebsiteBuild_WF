@@ -759,8 +759,7 @@ a {
 }
 
 .process-card {
-  position: sticky;
-  top: 80px; /* below header */
+  position: relative;
   border: 2px solid var(--card-accent, #ebaa1f);
   border-radius: 1.2rem;
   background: transparent;
@@ -770,13 +769,6 @@ a {
   will-change: transform;
   z-index: 1;
 }
-
-/* Each card stacks slightly lower — later cards sit ON TOP to cover earlier ones.
-   Small 8px gaps let a sliver of previous card border peek through. */
-.process-card:nth-child(1) { top: 80px; z-index: 1; }
-.process-card:nth-child(2) { top: 88px; z-index: 2; }
-.process-card:nth-child(3) { top: 96px; z-index: 3; }
-.process-card:nth-child(4) { top: 104px; z-index: 4; }
 
 .process-card:hover {
   background: var(--card-accent, #ebaa1f);
@@ -1888,8 +1880,6 @@ body.menu-open .hero-wave-canvas {
     font-size: 0.9rem;
   }
   .process-card {
-    position: relative;
-    top: auto !important;
     margin-bottom: 1rem;
   }
   .process-card__scan {
