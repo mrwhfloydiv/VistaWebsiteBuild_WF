@@ -2287,6 +2287,198 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
    Scroll-reactive content sections — premium
    ───────────────────────────────────────────── */
 
+/** Metric tiles — mouse-tracking tilt + spotlight (desktop only) */
+const initMetricTileMouseEffects = (): (() => void) => {
+  const tiles = Array.from(document.querySelectorAll<HTMLElement>(".metric-tile"));
+  if (!tiles.length) return () => {};
+
+  const isTouch = window.matchMedia("(hover: none)").matches;
+  const MAX_TILT = 4;
+  const cleanups: Array<() => void> = [];
+
+  tiles.forEach((tile) => {
+    const glow = tile.querySelector<HTMLElement>(".metric-tile__glow");
+
+    if (!isTouch) {
+      /* ── Desktop: tilt + spotlight ── */
+      const move = (e: MouseEvent) => {
+        const rect = tile.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+
+        gsap.to(tile, {
+          rotateX: (0.5 - y) * MAX_TILT * 2,
+          rotateY: (x - 0.5) * MAX_TILT * 2,
+          y: -4,
+          duration: 0.4,
+          ease: "power2.out",
+          overwrite: "auto",
+        });
+
+        if (glow) {
+          glow.style.setProperty("--spot-x", `${x * 100}%`);
+          glow.style.setProperty("--spot-y", `${y * 100}%`);
+        }
+      };
+
+      const leave = () => {
+        gsap.to(tile, {
+          rotateX: 0, rotateY: 0, y: 0,
+          duration: 0.6, ease: "elastic.out(1, 0.4)", overwrite: "auto",
+        });
+      };
+
+      tile.style.transformStyle = "preserve-3d";
+      tile.addEventListener("mousemove", move);
+      tile.addEventListener("mouseleave", leave);
+      cleanups.push(() => {
+        tile.removeEventListener("mousemove", move);
+        tile.removeEventListener("mouseleave", leave);
+        tile.style.transform = "";
+        tile.style.transformStyle = "";
+      });
+    } else {
+      /* ── Mobile: spotlight + color fill on touch (no tilt) ── */
+      const touchStart = (e: TouchEvent) => {
+        const t = e.touches[0];
+        const rect = tile.getBoundingClientRect();
+        const x = (t.clientX - rect.left) / rect.width;
+        const y = (t.clientY - rect.top) / rect.height;
+        if (glow) {
+          glow.style.setProperty("--spot-x", `${x * 100}%`);
+          glow.style.setProperty("--spot-y", `${y * 100}%`);
+        }
+        tile.classList.add("is-touched");
+      };
+
+      const touchMove = (e: TouchEvent) => {
+        const t = e.touches[0];
+        const rect = tile.getBoundingClientRect();
+        const x = (t.clientX - rect.left) / rect.width;
+        const y = (t.clientY - rect.top) / rect.height;
+        if (glow) {
+          glow.style.setProperty("--spot-x", `${x * 100}%`);
+          glow.style.setProperty("--spot-y", `${y * 100}%`);
+        }
+      };
+
+      const touchEnd = () => {
+        tile.classList.remove("is-touched");
+      };
+
+      tile.addEventListener("touchstart", touchStart, { passive: true });
+      tile.addEventListener("touchmove", touchMove, { passive: true });
+      tile.addEventListener("touchend", touchEnd);
+      tile.addEventListener("touchcancel", touchEnd);
+      cleanups.push(() => {
+        tile.removeEventListener("touchstart", touchStart);
+        tile.removeEventListener("touchmove", touchMove);
+        tile.removeEventListener("touchend", touchEnd);
+        tile.removeEventListener("touchcancel", touchEnd);
+        tile.classList.remove("is-touched");
+      });
+    }
+  });
+
+  return () => { cleanups.forEach((fn) => fn()); };
+};
+
+/** Process cards — mouse-tracking tilt + spotlight (desktop) / touch spotlight (mobile) */
+const initProcessCardMouseEffects = (): (() => void) => {
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".process-card"));
+  if (!cards.length) return () => {};
+
+  const isTouch = window.matchMedia("(hover: none)").matches;
+  const MAX_TILT = 4;
+  const cleanups: Array<() => void> = [];
+
+  cards.forEach((card) => {
+    const spot = card.querySelector<HTMLElement>(".process-card__spot");
+
+    if (!isTouch) {
+      /* ── Desktop: tilt + spotlight ── */
+      const move = (e: MouseEvent) => {
+        const rect = card.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+
+        gsap.to(card, {
+          rotateX: (0.5 - y) * MAX_TILT * 2,
+          rotateY: (x - 0.5) * MAX_TILT * 2,
+          y: -4,
+          duration: 0.4,
+          ease: "power2.out",
+          overwrite: "auto",
+        });
+
+        if (spot) {
+          spot.style.setProperty("--spot-x", `${x * 100}%`);
+          spot.style.setProperty("--spot-y", `${y * 100}%`);
+        }
+      };
+
+      const leave = () => {
+        gsap.to(card, {
+          rotateX: 0, rotateY: 0, y: 0,
+          duration: 0.6, ease: "elastic.out(1, 0.4)", overwrite: "auto",
+        });
+      };
+
+      card.style.transformStyle = "preserve-3d";
+      card.addEventListener("mousemove", move);
+      card.addEventListener("mouseleave", leave);
+      cleanups.push(() => {
+        card.removeEventListener("mousemove", move);
+        card.removeEventListener("mouseleave", leave);
+        card.style.transform = "";
+        card.style.transformStyle = "";
+      });
+    } else {
+      /* ── Mobile: spotlight + color fill on touch (no tilt) ── */
+      const touchStart = (e: TouchEvent) => {
+        const t = e.touches[0];
+        const rect = card.getBoundingClientRect();
+        const x = (t.clientX - rect.left) / rect.width;
+        const y = (t.clientY - rect.top) / rect.height;
+        if (spot) {
+          spot.style.setProperty("--spot-x", `${x * 100}%`);
+          spot.style.setProperty("--spot-y", `${y * 100}%`);
+        }
+        card.classList.add("is-touched");
+      };
+
+      const touchMove = (e: TouchEvent) => {
+        const t = e.touches[0];
+        const rect = card.getBoundingClientRect();
+        const x = (t.clientX - rect.left) / rect.width;
+        const y = (t.clientY - rect.top) / rect.height;
+        if (spot) {
+          spot.style.setProperty("--spot-x", `${x * 100}%`);
+          spot.style.setProperty("--spot-y", `${y * 100}%`);
+        }
+      };
+
+      const touchEnd = () => {
+        card.classList.remove("is-touched");
+      };
+
+      card.addEventListener("touchstart", touchStart, { passive: true });
+      card.addEventListener("touchmove", touchMove, { passive: true });
+      card.addEventListener("touchend", touchEnd);
+      card.addEventListener("touchcancel", touchEnd);
+      cleanups.push(() => {
+        card.removeEventListener("touchstart", touchStart);
+        card.removeEventListener("touchmove", touchMove);
+        card.removeEventListener("touchend", touchEnd);
+        card.removeEventListener("touchcancel", touchEnd);
+        card.classList.remove("is-touched");
+      });
+    }
+  });
+
+  return () => { cleanups.forEach((fn) => fn()); };
+};
+
 /** Metric tiles — dramatic entrance with blur, scale, stagger + parallax drift */
 const initMetricScrollEffects = (): (() => void) => {
   const section = document.getElementById("metricSection");
@@ -2432,23 +2624,6 @@ const initMetricScrollEffects = (): (() => void) => {
     );
     if (tween.scrollTrigger) allTriggers.push(tween.scrollTrigger);
   });
-
-  // ── Post-entrance parallax drift (desktop only) ──
-  if (!isMobile) {
-    tiles.forEach((tile, i) => {
-      const st = ScrollTrigger.create({
-        trigger: section,
-        start: "center center",
-        end: "bottom top",
-        scrub: true,
-        onUpdate: (self) => {
-          const drift = self.progress * (-18 - i * 6);
-          tile.style.transform = `translateY(${drift}px)`;
-        },
-      });
-      allTriggers.push(st);
-    });
-  }
 
   return () => {
     allTriggers.forEach((st) => st.kill());
@@ -2651,56 +2826,98 @@ const initTimelineScrollEffects = (): (() => void) => {
   };
 };
 
-/** Differentiator cards — 3D tilt on mouse move (desktop only) */
+/** Differentiator cards — springy 3D tilt + spotlight (desktop) / touch spotlight (mobile) */
 const initDiffCardTilt = (): (() => void) => {
-  if (window.matchMedia("(hover: none)").matches) return () => {};
-
   const cards = Array.from(document.querySelectorAll<HTMLElement>(".diff-card[data-tilt]"));
   if (!cards.length) return () => {};
 
-  const MAX_TILT = 6;
-
-  const handlers: Array<{
-    card: HTMLElement;
-    move: (e: MouseEvent) => void;
-    leave: () => void;
-  }> = [];
+  const isTouch = window.matchMedia("(hover: none)").matches;
+  const MAX_TILT = 4;
+  const cleanups: Array<() => void> = [];
 
   cards.forEach((card) => {
     const glowBorder = card.querySelector<HTMLElement>(".diff-card__glow-border");
 
-    const move = (e: MouseEvent) => {
-      const rect = card.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
+    if (!isTouch) {
+      /* ── Desktop: tilt + spotlight ── */
+      const move = (e: MouseEvent) => {
+        const rect = card.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
 
-      const rotateY = (x - 0.5) * MAX_TILT * 2;
-      const rotateX = (0.5 - y) * MAX_TILT * 2;
+        gsap.to(card, {
+          rotateX: (0.5 - y) * MAX_TILT * 2,
+          rotateY: (x - 0.5) * MAX_TILT * 2,
+          y: -4,
+          duration: 0.4,
+          ease: "power2.out",
+          overwrite: "auto",
+        });
 
-      card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        if (glowBorder) {
+          glowBorder.style.setProperty("--spot-x", `${x * 100}%`);
+          glowBorder.style.setProperty("--spot-y", `${y * 100}%`);
+        }
+      };
 
-      if (glowBorder) {
-        glowBorder.style.setProperty("--mouse-x", `${x * 100}%`);
-        glowBorder.style.setProperty("--mouse-y", `${y * 100}%`);
-      }
-    };
+      const leave = () => {
+        gsap.to(card, {
+          rotateX: 0, rotateY: 0, y: 0,
+          duration: 0.6, ease: "elastic.out(1, 0.4)", overwrite: "auto",
+        });
+      };
 
-    const leave = () => {
-      card.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg)";
-    };
+      card.addEventListener("mousemove", move);
+      card.addEventListener("mouseleave", leave);
+      cleanups.push(() => {
+        card.removeEventListener("mousemove", move);
+        card.removeEventListener("mouseleave", leave);
+        card.style.transform = "";
+      });
+    } else {
+      /* ── Mobile: spotlight + color fill on touch (no tilt) ── */
+      const touchStart = (e: TouchEvent) => {
+        const t = e.touches[0];
+        const rect = card.getBoundingClientRect();
+        const x = (t.clientX - rect.left) / rect.width;
+        const y = (t.clientY - rect.top) / rect.height;
+        if (glowBorder) {
+          glowBorder.style.setProperty("--spot-x", `${x * 100}%`);
+          glowBorder.style.setProperty("--spot-y", `${y * 100}%`);
+        }
+        card.classList.add("is-touched");
+      };
 
-    card.addEventListener("mousemove", move);
-    card.addEventListener("mouseleave", leave);
-    handlers.push({ card, move, leave });
+      const touchMove = (e: TouchEvent) => {
+        const t = e.touches[0];
+        const rect = card.getBoundingClientRect();
+        const x = (t.clientX - rect.left) / rect.width;
+        const y = (t.clientY - rect.top) / rect.height;
+        if (glowBorder) {
+          glowBorder.style.setProperty("--spot-x", `${x * 100}%`);
+          glowBorder.style.setProperty("--spot-y", `${y * 100}%`);
+        }
+      };
+
+      const touchEnd = () => {
+        card.classList.remove("is-touched");
+      };
+
+      card.addEventListener("touchstart", touchStart, { passive: true });
+      card.addEventListener("touchmove", touchMove, { passive: true });
+      card.addEventListener("touchend", touchEnd);
+      card.addEventListener("touchcancel", touchEnd);
+      cleanups.push(() => {
+        card.removeEventListener("touchstart", touchStart);
+        card.removeEventListener("touchmove", touchMove);
+        card.removeEventListener("touchend", touchEnd);
+        card.removeEventListener("touchcancel", touchEnd);
+        card.classList.remove("is-touched");
+      });
+    }
   });
 
-  return () => {
-    handlers.forEach(({ card, move, leave }) => {
-      card.removeEventListener("mousemove", move);
-      card.removeEventListener("mouseleave", leave);
-      card.style.transform = "";
-    });
-  };
+  return () => { cleanups.forEach((fn) => fn()); };
 };
 
 /** Differentiator cards — 3D fan-in with blur, reveal class, parallax drift */
@@ -2960,7 +3177,9 @@ export const initializeHomePageMotion = () => {
 
   // Scroll-reactive content sections
   const cleanupMetricScroll = initMetricScrollEffects();
+  const cleanupMetricMouse = initMetricTileMouseEffects();
   const cleanupTimelineScroll = initTimelineScrollEffects();
+  const cleanupProcessMouse = initProcessCardMouseEffects();
   const cleanupDiffTilt = initDiffCardTilt();
   const cleanupDiffScroll = initDiffScrollEffects();
   const cleanupColorShift = initGlobalColorShift();
@@ -2969,7 +3188,9 @@ export const initializeHomePageMotion = () => {
     cleanupButtons();
     cleanupHeroSequence();
     cleanupMetricScroll();
+    cleanupMetricMouse();
     cleanupTimelineScroll();
+    cleanupProcessMouse();
     cleanupDiffTilt();
     cleanupDiffScroll();
     cleanupColorShift();

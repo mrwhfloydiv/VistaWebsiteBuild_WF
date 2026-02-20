@@ -204,12 +204,12 @@ const homeMotionConfig = {
     <div class="section-shell">
       <div class="metric-header" data-reveal>
         <span class="chip">By the Numbers</span>
-        <h2 class="mt-5 text-3xl md:text-4xl">The weight behind<br/>every recommendation.</h2>
+        <h2 class="text-3xl md:text-4xl">The weight behind<br/>every recommendation.</h2>
         <p class="metric-header__sub">Numbers without context are noise. Here is what ours mean.</p>
       </div>
 
       <div class="metric-grid">
-        <article class="metric-tile" data-accent="#ebaa1f" data-metric-index="0">
+        <article class="metric-tile" data-accent="#ebaa1f" data-accent-light="true" data-metric-index="0">
           <div class="metric-tile__glow" aria-hidden="true"></div>
           <div class="metric-tile__icon" aria-hidden="true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -219,7 +219,7 @@ const homeMotionConfig = {
           <p class="metric-tile__context">Across 40+ states, from Fortune 100 relocations to emerging-market expansions.</p>
         </article>
 
-        <article class="metric-tile" data-accent="#b5d9ee" data-metric-index="1">
+        <article class="metric-tile" data-accent="#b5d9ee" data-accent-light="true" data-metric-index="1">
           <div class="metric-tile__glow" aria-hidden="true"></div>
           <div class="metric-tile__icon" aria-hidden="true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -229,7 +229,7 @@ const homeMotionConfig = {
           <p class="metric-tile__context">Real dollars secured at the table — not projections, not estimates.</p>
         </article>
 
-        <article class="metric-tile" data-accent="#fafafa" data-metric-index="2">
+        <article class="metric-tile" data-accent="#fafafa" data-accent-light="true" data-metric-index="2">
           <div class="metric-tile__glow" aria-hidden="true"></div>
           <div class="metric-tile__icon" aria-hidden="true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
@@ -257,13 +257,15 @@ const homeMotionConfig = {
     <div class="section-shell">
       <div class="process-header">
         <span class="chip">Client Workflow</span>
-        <h2 class="mt-5 text-3xl md:text-5xl">How Vista runs<br/>engagements.</h2>
+        <h2 class="text-3xl md:text-5xl">How Vista runs<br/>engagements.</h2>
         <p class="process-header__sub">Four phases. One integrated team. Zero ambiguity.</p>
       </div>
     </div>
 
     <div class="process-stack" id="processStack">
-      <article class="process-card" data-process-card="0" style="--card-accent: #ebaa1f; --card-bg: #11100c;">
+      <article class="process-card" data-process-card="0" data-accent-light="true" style="--card-accent: #ebaa1f; --card-bg: #11100c;">
+        <div class="process-card__scan" aria-hidden="true"></div>
+        <div class="process-card__spot" aria-hidden="true"></div>
         <div class="process-card__inner">
           <div class="process-card__left">
             <span class="process-card__num">01</span>
@@ -280,7 +282,9 @@ const homeMotionConfig = {
         <div class="process-card__accent-line" aria-hidden="true"></div>
       </article>
 
-      <article class="process-card" data-process-card="1" style="--card-accent: #b5d9ee; --card-bg: #0c0f12;">
+      <article class="process-card" data-process-card="1" data-accent-light="true" style="--card-accent: #b5d9ee; --card-bg: #0c0f12;">
+        <div class="process-card__scan" aria-hidden="true"></div>
+        <div class="process-card__spot" aria-hidden="true"></div>
         <div class="process-card__inner">
           <div class="process-card__left">
             <span class="process-card__num">02</span>
@@ -297,7 +301,9 @@ const homeMotionConfig = {
         <div class="process-card__accent-line" aria-hidden="true"></div>
       </article>
 
-      <article class="process-card" data-process-card="2" style="--card-accent: #b5d9ee; --card-bg: #0c0f12;">
+      <article class="process-card" data-process-card="2" data-accent-light="true" style="--card-accent: #fafafa; --card-bg: #0c0f12;">
+        <div class="process-card__scan" aria-hidden="true"></div>
+        <div class="process-card__spot" aria-hidden="true"></div>
         <div class="process-card__inner">
           <div class="process-card__left">
             <span class="process-card__num">03</span>
@@ -315,6 +321,8 @@ const homeMotionConfig = {
       </article>
 
       <article class="process-card" data-process-card="3" style="--card-accent: #b22c2e; --card-bg: #110c0c;">
+        <div class="process-card__scan" aria-hidden="true"></div>
+        <div class="process-card__spot" aria-hidden="true"></div>
         <div class="process-card__inner">
           <div class="process-card__left">
             <span class="process-card__num">04</span>
@@ -339,12 +347,12 @@ const homeMotionConfig = {
       <div class="diff-section">
         <div class="diff-header" data-reveal>
           <span class="chip">The Vista Edge</span>
-          <h2 class="mt-5 text-4xl md:text-5xl lg:text-6xl">Three reasons we<br/>don't lose.</h2>
+          <h2 class="text-4xl md:text-5xl lg:text-6xl">Three reasons we<br/>don't lose.</h2>
           <p class="diff-header__sub">Every engagement starts with three structural advantages no competitor can replicate.</p>
         </div>
 
         <div class="diff-cards">
-          <article class="diff-card" data-tilt data-diff-index="0" style="--diff-accent: #ebaa1f;">
+          <article class="diff-card" data-tilt data-diff-index="0" data-accent-light="true" style="--diff-accent: #ebaa1f;">
             <div class="diff-card__glow-border" aria-hidden="true"></div>
             <div class="diff-card__bg-gradient" aria-hidden="true"></div>
             <div class="diff-card__number" aria-hidden="true">01</div>
@@ -354,7 +362,7 @@ const homeMotionConfig = {
             <div class="diff-card__line" aria-hidden="true"></div>
           </article>
 
-          <article class="diff-card" data-tilt data-diff-index="1" style="--diff-accent: #b5d9ee;">
+          <article class="diff-card" data-tilt data-diff-index="1" data-accent-light="true" style="--diff-accent: #b5d9ee;">
             <div class="diff-card__glow-border" aria-hidden="true"></div>
             <div class="diff-card__bg-gradient" aria-hidden="true"></div>
             <div class="diff-card__number" aria-hidden="true">02</div>

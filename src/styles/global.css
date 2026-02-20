@@ -375,6 +375,7 @@ a {
   text-transform: uppercase;
   background: var(--vista-red);
   color: #fff;
+  margin-bottom: 1.5rem;
   box-shadow: 0 2px 12px rgba(178, 44, 46, 0.3),
               inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transition: box-shadow 0.3s ease, transform 0.3s ease;
@@ -392,6 +393,7 @@ a {
   box-shadow: none;
   color: rgba(250, 250, 250, 0.78);
   padding: 0;
+  margin-bottom: 0;
   font-weight: 400;
   letter-spacing: 0.06em;
 }
@@ -481,17 +483,13 @@ a {
 .metric-grid {
   display: grid;
   gap: 0.55rem;
-  border: 1px solid rgba(250, 250, 250, 0.12);
-  border-radius: 1rem;
-  padding: 0.6rem;
-  background: transparent;
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .metric-tile {
   position: relative;
   border-radius: 0.8rem;
-  border: 1px solid rgba(250, 250, 250, 0.08);
+  border: 2px solid var(--tile-accent, #ebaa1f);
   padding: 1.5rem 1.25rem;
   background: transparent;
   overflow: hidden;
@@ -499,17 +497,36 @@ a {
               background 0.35s ease, box-shadow 0.35s ease;
 }
 
-/* Hover glassmorphism */
+/* Hover — fill with accent color (transform driven by JS for tilt) */
 .metric-tile:hover {
-  background: rgba(250, 250, 250, 0.04);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-color: rgba(250, 250, 250, 0.16);
-  transform: translateY(-4px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  background: var(--tile-accent, #ebaa1f);
+  border-color: transparent;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
-/* Left accent bar */
+/* On hover: text goes white (dark tiles override to black below) */
+.metric-tile:hover .stat-number,
+.metric-tile:hover .metric-tile__label,
+.metric-tile:hover .metric-tile__context {
+  color: #fff !important;
+}
+
+.metric-tile:hover .metric-tile__icon {
+  color: #fff;
+}
+
+/* White-accent tile (#fafafa): text flips to dark */
+.metric-tile[data-accent-light="true"]:hover .stat-number,
+.metric-tile[data-accent-light="true"]:hover .metric-tile__label,
+.metric-tile[data-accent-light="true"]:hover .metric-tile__context {
+  color: #111 !important;
+}
+
+.metric-tile[data-accent-light="true"]:hover .metric-tile__icon {
+  color: #111;
+}
+
+/* Left accent bar — flat */
 .metric-tile::before {
   content: "";
   position: absolute;
@@ -518,41 +535,75 @@ a {
   width: 2px;
   height: 0;
   background: var(--tile-accent, #ebaa1f);
-  box-shadow: 0 0 12px var(--tile-accent, #ebaa1f);
   transition: height 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   border-radius: 0 1px 1px 0;
 }
 
 .metric-tile:hover::before {
   height: 100%;
+  background: rgba(255, 255, 255, 0.4);
 }
 
-/* Bottom accent glow */
+.metric-tile[data-accent-light="true"]:hover::before {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Mouse-tracking spotlight — JS positions via --spot-x / --spot-y */
 .metric-tile__glow {
   position: absolute;
-  inset: auto 10% -20% 10%;
-  height: 60%;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
-  background: radial-gradient(ellipse at center, var(--tile-accent, #ebaa1f), transparent 70%);
+  background: var(--tile-accent, #ebaa1f);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.45s ease;
+  transform: translate(-50%, -50%);
+  left: var(--spot-x, 50%);
+  top: var(--spot-y, 50%);
+  filter: blur(50px);
+  transition: opacity 0.35s ease;
 }
 
 .metric-tile:hover .metric-tile__glow {
-  opacity: 0.15;
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.3);
 }
+
+.metric-tile[data-accent-light="true"]:hover .metric-tile__glow {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+/* ── Touch state — mirrors :hover for mobile ── */
+.metric-tile.is-touched {
+  background: var(--tile-accent, #ebaa1f);
+  border-color: transparent;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+.metric-tile.is-touched .stat-number,
+.metric-tile.is-touched .metric-tile__label,
+.metric-tile.is-touched .metric-tile__context { color: #fff !important; }
+.metric-tile.is-touched .metric-tile__icon { color: #fff; }
+.metric-tile[data-accent-light="true"].is-touched .stat-number,
+.metric-tile[data-accent-light="true"].is-touched .metric-tile__label,
+.metric-tile[data-accent-light="true"].is-touched .metric-tile__context { color: #111 !important; }
+.metric-tile[data-accent-light="true"].is-touched .metric-tile__icon { color: #111; }
+.metric-tile.is-touched::before { height: 100%; background: rgba(255, 255, 255, 0.4); }
+.metric-tile[data-accent-light="true"].is-touched::before { background: rgba(0, 0, 0, 0.15); }
+.metric-tile.is-touched .metric-tile__glow { opacity: 1; background: rgba(255, 255, 255, 0.3); }
+.metric-tile[data-accent-light="true"].is-touched .metric-tile__glow { background: rgba(255, 255, 255, 0.45); }
+.metric-tile.is-touched .metric-tile__icon { opacity: 1; transform: translateY(-2px); }
+.metric-tile.is-touched .metric-tile__context { color: rgba(250, 250, 250, 0.6); }
 
 /* Icon above number */
 .metric-tile__icon {
   color: var(--tile-accent, #ebaa1f);
   opacity: 0.45;
   margin-bottom: 0.75rem;
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease, color 0.35s ease;
 }
 
 .metric-tile:hover .metric-tile__icon {
-  opacity: 0.85;
+  opacity: 1;
   transform: translateY(-2px);
 }
 
@@ -561,6 +612,7 @@ a {
   font-size: 0.75rem;
   color: rgba(250, 250, 250, 0.65);
   margin-top: 0.25rem;
+  transition: color 0.35s ease;
 }
 
 /* Context paragraph */
@@ -589,24 +641,19 @@ a {
   animation: counter-glow 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Metric tile number shimmer on count complete */
-@keyframes number-shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
+/* Metric tile flash on count complete — flat */
+@keyframes tile-flash {
+  0%   { opacity: 0; }
+  30%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .metric-tile.is-counted::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(250, 250, 250, 0.06) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: number-shimmer 1.2s ease-out forwards;
+  background: rgba(250, 250, 250, 0.04);
+  animation: tile-flash 0.8s ease-out forwards;
   pointer-events: none;
   border-radius: inherit;
 }
@@ -627,6 +674,7 @@ a {
   font-family: "Space Grotesk", sans-serif;
   font-size: clamp(1.8rem, 4vw, 2.7rem);
   line-height: 1;
+  transition: color 0.35s ease;
 }
 
 .team-card {
@@ -713,12 +761,12 @@ a {
 .process-card {
   position: sticky;
   top: 80px; /* below header */
-  border: 1px solid rgba(250, 250, 250, 0.08);
+  border: 2px solid var(--card-accent, #ebaa1f);
   border-radius: 1.2rem;
-  background: var(--card-bg, #0d0d10);
+  background: transparent;
   overflow: hidden;
   margin-bottom: 2rem;
-  transition: box-shadow 0.4s ease, border-color 0.4s ease, transform 0.4s ease;
+  transition: box-shadow 0.4s ease, border-color 0.4s ease, background 0.35s ease, transform 0.4s ease;
   will-change: transform;
   z-index: 1;
 }
@@ -731,12 +779,35 @@ a {
 .process-card:nth-child(4) { top: 104px; z-index: 4; }
 
 .process-card:hover {
-  border-color: rgba(250, 250, 250, 0.18);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35),
-              0 0 0 1px rgba(250, 250, 250, 0.05);
+  background: var(--card-accent, #ebaa1f);
+  border-color: transparent;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* On hover: all text goes white */
+.process-card:hover .process-card__num,
+.process-card:hover .process-card__tag,
+.process-card:hover .process-card__title,
+.process-card:hover .process-card__desc,
+.process-card:hover .process-card__icon {
+  color: #fff !important;
+  opacity: 1 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Light-accent cards: text flips to dark */
+.process-card[data-accent-light="true"]:hover .process-card__num,
+.process-card[data-accent-light="true"]:hover .process-card__tag,
+.process-card[data-accent-light="true"]:hover .process-card__title,
+.process-card[data-accent-light="true"]:hover .process-card__desc,
+.process-card[data-accent-light="true"]:hover .process-card__icon {
+  color: #111 !important;
+  border-color: rgba(0, 0, 0, 0.2) !important;
 }
 
 .process-card__inner {
+  position: relative;
+  z-index: 3;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -759,12 +830,11 @@ a {
   color: var(--card-accent, #ebaa1f);
   line-height: 1;
   opacity: 0.2;
-  transition: opacity 0.5s ease, text-shadow 0.5s ease;
+  transition: opacity 0.5s ease, color 0.35s ease;
 }
 
 .process-card.is-active .process-card__num {
   opacity: 1;
-  text-shadow: 0 0 30px var(--card-accent);
 }
 
 .process-card__tag {
@@ -777,7 +847,7 @@ a {
   border-radius: 999px;
   padding: 0.2rem 0.55rem;
   white-space: nowrap;
-  transition: color 0.5s ease, border-color 0.5s ease;
+  transition: color 0.35s ease, border-color 0.35s ease;
 }
 
 .process-card.is-active .process-card__tag {
@@ -794,7 +864,7 @@ a {
   font-weight: 600;
   margin-bottom: 0.6rem;
   color: rgba(250, 250, 250, 0.7);
-  transition: color 0.5s ease;
+  transition: color 0.35s ease;
 }
 
 .process-card.is-active .process-card__title {
@@ -805,7 +875,7 @@ a {
   font-size: 0.92rem;
   color: rgba(250, 250, 250, 0.4);
   line-height: 1.6;
-  transition: color 0.5s ease;
+  transition: color 0.35s ease;
 }
 
 .process-card.is-active .process-card__desc {
@@ -815,7 +885,7 @@ a {
 .process-card__icon {
   color: var(--card-accent, #ebaa1f);
   opacity: 0.15;
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  transition: opacity 0.5s ease, transform 0.5s ease, color 0.35s ease;
 }
 
 .process-card.is-active .process-card__icon {
@@ -823,26 +893,65 @@ a {
   transform: scale(1.1);
 }
 
-.process-card:hover .process-card__icon {
-  opacity: 0.7;
-  transform: scale(1.15) rotate(-3deg);
+/* accent line — hidden for clean look */
+.process-card__accent-line { display: none; }
+
+/* Scan line — disabled (kept for future use) */
+.process-card__scan {
+  display: none;
 }
 
-/* Bottom accent line — grows on activation */
-.process-card__accent-line {
+/* Mouse spotlight on process cards — JS sets --spot-x / --spot-y */
+.process-card__spot {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 0%;
-  height: 2px;
-  background: linear-gradient(90deg, var(--card-accent), transparent);
-  box-shadow: 0 0 15px var(--card-accent);
-  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: var(--card-accent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  left: var(--spot-x, 50%);
+  top: var(--spot-y, 50%);
+  filter: blur(50px);
+  transition: opacity 0.35s ease;
+  z-index: 2;
 }
 
-.process-card.is-active .process-card__accent-line {
-  width: 100%;
+.process-card:hover .process-card__spot {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.3);
 }
+
+.process-card[data-accent-light="true"]:hover .process-card__spot {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+/* ── Touch state — mirrors :hover for mobile ── */
+.process-card.is-touched {
+  background: var(--card-accent, #ebaa1f);
+  border-color: transparent;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+.process-card.is-touched .process-card__num,
+.process-card.is-touched .process-card__tag,
+.process-card.is-touched .process-card__title,
+.process-card.is-touched .process-card__desc,
+.process-card.is-touched .process-card__icon {
+  color: #fff !important;
+  opacity: 1 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+.process-card[data-accent-light="true"].is-touched .process-card__num,
+.process-card[data-accent-light="true"].is-touched .process-card__tag,
+.process-card[data-accent-light="true"].is-touched .process-card__title,
+.process-card[data-accent-light="true"].is-touched .process-card__desc,
+.process-card[data-accent-light="true"].is-touched .process-card__icon {
+  color: #111 !important;
+  border-color: rgba(0, 0, 0, 0.2) !important;
+}
+.process-card.is-touched .process-card__spot { opacity: 1; background: rgba(255, 255, 255, 0.3); }
+.process-card[data-accent-light="true"].is-touched .process-card__spot { background: rgba(255, 255, 255, 0.45); }
 
 /* ── Differentiator Section — full-bleed wrapper ── */
 .diff-section-wrap {
@@ -872,111 +981,93 @@ a {
 .diff-card {
   position: relative;
   padding: 2rem 1.5rem;
-  border: 1px solid rgba(250, 250, 250, 0.08);
+  border: 2px solid var(--diff-accent, #ebaa1f);
   border-radius: 1rem;
+  background: transparent;
   overflow: hidden;
   transform-style: preserve-3d;
   transition: border-color 0.4s ease, transform 0.4s ease,
-              background 0.4s ease, box-shadow 0.4s ease;
+              background 0.35s ease, box-shadow 0.4s ease;
   /* JS sets rotateX/Y via --rx/--ry */
   will-change: transform;
 }
 
 .diff-card:hover {
-  border-color: rgba(250, 250, 250, 0.22);
-  background: rgba(250, 250, 250, 0.03);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  background: var(--diff-accent, #ebaa1f);
+  border-color: transparent;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
-/* Mouse-tracking glow border — JS sets --mouse-x, --mouse-y */
+/* On hover: text goes white */
+.diff-card:hover .diff-card__number,
+.diff-card:hover .diff-card__title,
+.diff-card:hover .diff-card__text {
+  color: #fff !important;
+}
+
+/* Light-accent cards: text flips to dark */
+.diff-card[data-accent-light="true"]:hover .diff-card__number,
+.diff-card[data-accent-light="true"]:hover .diff-card__title,
+.diff-card[data-accent-light="true"]:hover .diff-card__text {
+  color: #111 !important;
+}
+
+/* Mouse-tracking spotlight — JS sets --spot-x / --spot-y */
 .diff-card__glow-border {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: var(--diff-accent, #ebaa1f);
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.4s ease;
-  background: radial-gradient(
-    300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    var(--diff-accent, #ebaa1f) 0%,
-    transparent 70%
-  );
-  /* Mask to border only */
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  padding: 1px;
+  transform: translate(-50%, -50%);
+  left: var(--spot-x, 50%);
+  top: var(--spot-y, 50%);
+  filter: blur(50px);
+  transition: opacity 0.35s ease;
+  z-index: 2;
 }
 
 .diff-card:hover .diff-card__glow-border {
-  opacity: 0.6;
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.3);
 }
 
-/* Background gradient shift on hover */
-.diff-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    ellipse at 30% 80%,
-    var(--diff-accent, #ebaa1f),
-    transparent 70%
-  );
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.45s ease;
+.diff-card[data-accent-light="true"]:hover .diff-card__glow-border {
+  background: rgba(255, 255, 255, 0.45);
 }
 
-.diff-card:hover::after {
-  opacity: 0.06;
+/* ── Touch state — mirrors :hover for mobile ── */
+.diff-card.is-touched {
+  background: var(--diff-accent, #ebaa1f);
+  border-color: transparent;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
+.diff-card.is-touched .diff-card__number,
+.diff-card.is-touched .diff-card__title,
+.diff-card.is-touched .diff-card__text { color: #fff !important; }
+.diff-card[data-accent-light="true"].is-touched .diff-card__number,
+.diff-card[data-accent-light="true"].is-touched .diff-card__title,
+.diff-card[data-accent-light="true"].is-touched .diff-card__text { color: #111 !important; }
+.diff-card.is-touched .diff-card__glow-border { opacity: 1; background: rgba(255, 255, 255, 0.3); }
+.diff-card[data-accent-light="true"].is-touched .diff-card__glow-border { background: rgba(255, 255, 255, 0.45); }
 
-.diff-card__accent {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 3px;
-  height: 0;
-  background: linear-gradient(180deg, var(--diff-accent), transparent);
-  box-shadow: 0 0 10px var(--diff-accent);
-  transition: height 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 1;
-}
-
-.diff-card:hover .diff-card__accent {
-  height: 100%;
-}
+/* Legacy elements — hidden */
+.diff-card::after { display: none; }
+.diff-card__accent { display: none; }
 
 .diff-card__number {
-  font-family: "Space Mono", monospace;
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: rgba(250, 250, 250, 0.06);
-  line-height: 1;
-  margin-bottom: 1rem;
-  transition: color 0.4s ease, text-shadow 0.4s ease, transform 0.4s ease;
-  position: relative;
-  z-index: 1;
-}
-
-.diff-card:hover .diff-card__number {
-  color: var(--diff-accent);
-  text-shadow: 0 0 20px var(--diff-accent);
-  transform: translateX(4px);
+  display: none;
 }
 
 .diff-card__title {
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 0.6rem;
   position: relative;
-  z-index: 1;
+  z-index: 3;
+  transition: color 0.35s ease;
 }
 
 .diff-card__text {
@@ -984,53 +1075,13 @@ a {
   color: rgba(250, 250, 250, 0.65);
   line-height: 1.55;
   position: relative;
-  z-index: 1;
+  z-index: 3;
+  transition: color 0.35s ease;
 }
 
-/* Card background gradient — subtle, animated on reveal + hover */
-.diff-card__bg-gradient {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    ellipse at 20% 100%,
-    var(--diff-accent, #ebaa1f),
-    transparent 70%
-  );
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.6s ease;
-}
-
-.diff-card.is-revealed .diff-card__bg-gradient {
-  opacity: 0.04;
-}
-
-.diff-card:hover .diff-card__bg-gradient {
-  opacity: 0.08;
-}
-
-/* Bottom accent line — animates on reveal */
-.diff-card__line {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 0%;
-  height: 2px;
-  background: linear-gradient(90deg, var(--diff-accent), transparent);
-  box-shadow: 0 0 12px var(--diff-accent);
-  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-  z-index: 1;
-}
-
-.diff-card.is-revealed .diff-card__line {
-  width: 100%;
-}
-
-/* Enhance number on reveal */
-.diff-card.is-revealed .diff-card__number {
-  color: rgba(250, 250, 250, 0.08);
-}
+/* Legacy elements — hidden */
+.diff-card__bg-gradient { display: none; }
+.diff-card__line { display: none; }
 
 /* ── Lightspeed CTA ── */
 /* Warp zone: tall section with sticky viewport for the canvas animation */
@@ -1841,6 +1892,9 @@ body.menu-open .hero-wave-canvas {
     top: auto !important;
     margin-bottom: 1rem;
   }
+  .process-card__scan {
+    display: none;
+  }
   .process-card__inner {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -1876,13 +1930,7 @@ body.menu-open .hero-wave-canvas {
   .diff-card {
     transform-style: flat;
   }
-  .diff-card__glow-border {
-    display: none;
-  }
-  .diff-card__number {
-    font-size: 2.5rem;
-    margin-bottom: 0.8rem;
-  }
+  /* diff-card__number hidden globally via display:none */
 
   .footer-grid {
     grid-template-columns: 1fr 1fr;
