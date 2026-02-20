@@ -200,102 +200,180 @@ const homeMotionConfig = {
   </section>
 
   <!-- ── 1. METRIC COUNTERS ── -->
-  <section class="section-shell pt-20 pb-8">
-    <div class="metric-grid">
-      <article class="metric-tile" data-reveal>
-        <p class="stat-number text-[#ebaa1f]" data-counter data-target="1000" data-suffix="+">0</p>
-        <p class="mono text-sm text-white/75">PROJECTS SUPPORTED</p>
-      </article>
-      <article class="metric-tile" data-reveal>
-        <p class="stat-number text-[#b5d9ee]" data-counter data-prefix="$" data-target="4" data-suffix="B+">0</p>
-        <p class="mono text-sm text-white/75">INCENTIVES NEGOTIATED</p>
-      </article>
-      <article class="metric-tile" data-reveal>
-        <p class="stat-number text-white" data-counter data-target="40" data-suffix="+">0</p>
-        <p class="mono text-sm text-white/75">MARKETS ANALYZED YEARLY</p>
-      </article>
-      <article class="metric-tile" data-reveal>
-        <p class="stat-number text-[#b22c2e]">24/7</p>
-        <p class="mono text-sm text-white/75">EXECUTION MINDSET</p>
-      </article>
+  <section class="metric-section" id="metricSection">
+    <div class="section-shell">
+      <div class="metric-header" data-reveal>
+        <span class="chip">By the Numbers</span>
+        <h2 class="mt-5 text-3xl md:text-4xl">The weight behind<br/>every recommendation.</h2>
+        <p class="metric-header__sub">Numbers without context are noise. Here is what ours mean.</p>
+      </div>
+
+      <div class="metric-grid">
+        <article class="metric-tile" data-accent="#ebaa1f" data-metric-index="0">
+          <div class="metric-tile__glow" aria-hidden="true"></div>
+          <div class="metric-tile__icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <p class="stat-number text-[#ebaa1f]" data-counter data-target="1000" data-suffix="+">0</p>
+          <p class="metric-tile__label mono">PROJECTS SUPPORTED</p>
+          <p class="metric-tile__context">Across 40+ states, from Fortune 100 relocations to emerging-market expansions.</p>
+        </article>
+
+        <article class="metric-tile" data-accent="#b5d9ee" data-metric-index="1">
+          <div class="metric-tile__glow" aria-hidden="true"></div>
+          <div class="metric-tile__icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <p class="stat-number text-[#b5d9ee]" data-counter data-prefix="$" data-target="4" data-suffix="B+">0</p>
+          <p class="metric-tile__label mono">INCENTIVES NEGOTIATED</p>
+          <p class="metric-tile__context">Real dollars secured at the table — not projections, not estimates.</p>
+        </article>
+
+        <article class="metric-tile" data-accent="#fafafa" data-metric-index="2">
+          <div class="metric-tile__glow" aria-hidden="true"></div>
+          <div class="metric-tile__icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <p class="stat-number text-white" data-counter data-target="40" data-suffix="+">0</p>
+          <p class="metric-tile__label mono">MARKETS ANALYZED YEARLY</p>
+          <p class="metric-tile__context">Proprietary scoring across labor, cost, risk, and regulatory dimensions.</p>
+        </article>
+
+        <article class="metric-tile" data-accent="#b22c2e" data-metric-index="3">
+          <div class="metric-tile__glow" aria-hidden="true"></div>
+          <div class="metric-tile__icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <p class="stat-number text-[#b22c2e]">24/7</p>
+          <p class="metric-tile__label mono">EXECUTION MINDSET</p>
+          <p class="metric-tile__context">Location decisions don't wait. Neither do we.</p>
+        </article>
+      </div>
     </div>
   </section>
 
-  <!-- ── 2. PROCESS TIMELINE ── -->
-  <section class="section-shell py-20">
-    <div class="mb-10 flex flex-wrap items-end justify-between gap-4">
-      <div class="space-y-2">
+  <!-- ── 2. PROCESS — STACKING CARDS ── -->
+  <section class="process-section" id="processSection">
+    <div class="section-shell">
+      <div class="process-header">
         <span class="chip">Client Workflow</span>
-        <h2 data-reveal class="text-3xl md:text-4xl">How Vista runs engagements</h2>
+        <h2 class="mt-5 text-3xl md:text-5xl">How Vista runs<br/>engagements.</h2>
+        <p class="process-header__sub">Four phases. One integrated team. Zero ambiguity.</p>
       </div>
     </div>
-    <div class="process-timeline" data-reveal>
-      <div class="process-timeline__track">
-        <div class="process-timeline__line">
-          <div class="process-timeline__line-fill"></div>
-        </div>
-        <div class="process-timeline__step" data-step>
-          <div class="process-timeline__dot"></div>
-          <div class="process-timeline__content">
-            <span class="process-timeline__num">01</span>
-            <h3 class="process-timeline__title">Frame Decision</h3>
-            <p class="process-timeline__desc">Lock the strategic criteria and business constraints.</p>
+
+    <div class="process-stack" id="processStack">
+      <article class="process-card" data-process-card="0" style="--card-accent: #ebaa1f; --card-bg: #11100c;">
+        <div class="process-card__inner">
+          <div class="process-card__left">
+            <span class="process-card__num">01</span>
+            <div class="process-card__tag">WEEK 1–2</div>
+          </div>
+          <div class="process-card__body">
+            <h3 class="process-card__title">Frame the Decision</h3>
+            <p class="process-card__desc">Lock the strategic criteria and business constraints before a single market is scored. We align leadership, define non-negotiables, and build the analytical framework that drives every recommendation forward.</p>
+          </div>
+          <div class="process-card__icon" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
           </div>
         </div>
-        <div class="process-timeline__step" data-step>
-          <div class="process-timeline__dot"></div>
-          <div class="process-timeline__content">
-            <span class="process-timeline__num">02</span>
-            <h3 class="process-timeline__title">Model Markets</h3>
-            <p class="process-timeline__desc">Score labor, cost, risk, and operational fit.</p>
+        <div class="process-card__accent-line" aria-hidden="true"></div>
+      </article>
+
+      <article class="process-card" data-process-card="1" style="--card-accent: #b5d9ee; --card-bg: #0c0f12;">
+        <div class="process-card__inner">
+          <div class="process-card__left">
+            <span class="process-card__num">02</span>
+            <div class="process-card__tag">WEEK 3–6</div>
+          </div>
+          <div class="process-card__body">
+            <h3 class="process-card__title">Model the Markets</h3>
+            <p class="process-card__desc">Score labor, cost, risk, and operational fit across every viable metro. Our proprietary models weigh 40+ variables to surface the sites that match strategy — not just availability.</p>
+          </div>
+          <div class="process-card__icon" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           </div>
         </div>
-        <div class="process-timeline__step" data-step>
-          <div class="process-timeline__dot"></div>
-          <div class="process-timeline__content">
-            <span class="process-timeline__num">03</span>
-            <h3 class="process-timeline__title">Shape Incentives</h3>
-            <p class="process-timeline__desc">Build and negotiate package structures with leverage.</p>
+        <div class="process-card__accent-line" aria-hidden="true"></div>
+      </article>
+
+      <article class="process-card" data-process-card="2" style="--card-accent: #b5d9ee; --card-bg: #0c0f12;">
+        <div class="process-card__inner">
+          <div class="process-card__left">
+            <span class="process-card__num">03</span>
+            <div class="process-card__tag">WEEK 6–10</div>
+          </div>
+          <div class="process-card__body">
+            <h3 class="process-card__title">Shape the Incentives</h3>
+            <p class="process-card__desc">Build and negotiate package structures with leverage no one else brings to the table. We know where the money is — and how to structure a deal that survives political cycles.</p>
+          </div>
+          <div class="process-card__icon" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </div>
         </div>
-        <div class="process-timeline__step" data-step>
-          <div class="process-timeline__dot"></div>
-          <div class="process-timeline__content">
-            <span class="process-timeline__num">04</span>
-            <h3 class="process-timeline__title">Execute Confidently</h3>
-            <p class="process-timeline__desc">Move from selection to launch with implementation rigor.</p>
+        <div class="process-card__accent-line" aria-hidden="true"></div>
+      </article>
+
+      <article class="process-card" data-process-card="3" style="--card-accent: #b22c2e; --card-bg: #110c0c;">
+        <div class="process-card__inner">
+          <div class="process-card__left">
+            <span class="process-card__num">04</span>
+            <div class="process-card__tag">WEEK 10+</div>
+          </div>
+          <div class="process-card__body">
+            <h3 class="process-card__title">Execute Confidently</h3>
+            <p class="process-card__desc">Move from selection to launch with implementation rigor that holds up under scrutiny. We stay in the room until the ribbon is cut — not just until the report is filed.</p>
+          </div>
+          <div class="process-card__icon" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
         </div>
-      </div>
+        <div class="process-card__accent-line" aria-hidden="true"></div>
+      </article>
     </div>
   </section>
 
   <!-- ── 3. DIFFERENTIATORS ── -->
-  <section class="section-shell py-20">
-    <div class="diff-section">
-      <div class="diff-header" data-reveal>
-        <span class="chip">The Vista Edge</span>
-        <h2 class="mt-3 text-4xl md:text-5xl">Three reasons we<br/>don't lose.</h2>
-      </div>
-      <div class="diff-cards">
-        <article class="diff-card" data-reveal>
-          <div class="diff-card__number">01</div>
-          <div class="diff-card__accent" style="--diff-accent: #ebaa1f;"></div>
-          <h3 class="diff-card__title">We integrate from day one</h3>
-          <p class="diff-card__text">Site strategy, incentives, and analytics operate as one team from the first call. No handoffs. No silos. One engine.</p>
-        </article>
-        <article class="diff-card" data-reveal>
-          <div class="diff-card__number">02</div>
-          <div class="diff-card__accent" style="--diff-accent: #b5d9ee;"></div>
-          <h3 class="diff-card__title">We model downside early</h3>
-          <p class="diff-card__text">Every recommendation is pressure-tested against labor risk, regulatory shifts, and governance alignment before it reaches your board.</p>
-        </article>
-        <article class="diff-card" data-reveal>
-          <div class="diff-card__number">03</div>
-          <div class="diff-card__accent" style="--diff-accent: #b22c2e;"></div>
-          <h3 class="diff-card__title">We turn analysis into decisions</h3>
-          <p class="diff-card__text">Technical depth means nothing if leadership can't act on it. We translate complexity into clear executive choices — fast.</p>
-        </article>
+  <section class="diff-section-wrap" id="diffSection">
+    <div class="section-shell py-24">
+      <div class="diff-section">
+        <div class="diff-header" data-reveal>
+          <span class="chip">The Vista Edge</span>
+          <h2 class="mt-5 text-4xl md:text-5xl lg:text-6xl">Three reasons we<br/>don't lose.</h2>
+          <p class="diff-header__sub">Every engagement starts with three structural advantages no competitor can replicate.</p>
+        </div>
+
+        <div class="diff-cards">
+          <article class="diff-card" data-tilt data-diff-index="0" style="--diff-accent: #ebaa1f;">
+            <div class="diff-card__glow-border" aria-hidden="true"></div>
+            <div class="diff-card__bg-gradient" aria-hidden="true"></div>
+            <div class="diff-card__number" aria-hidden="true">01</div>
+            <div class="diff-card__accent"></div>
+            <h3 class="diff-card__title">We integrate from day one</h3>
+            <p class="diff-card__text">Site strategy, incentives, and analytics operate as one team from the first call. No handoffs. No silos. One engine.</p>
+            <div class="diff-card__line" aria-hidden="true"></div>
+          </article>
+
+          <article class="diff-card" data-tilt data-diff-index="1" style="--diff-accent: #b5d9ee;">
+            <div class="diff-card__glow-border" aria-hidden="true"></div>
+            <div class="diff-card__bg-gradient" aria-hidden="true"></div>
+            <div class="diff-card__number" aria-hidden="true">02</div>
+            <div class="diff-card__accent"></div>
+            <h3 class="diff-card__title">We model downside early</h3>
+            <p class="diff-card__text">Every recommendation is pressure-tested against labor risk, regulatory shifts, and governance alignment before it reaches your board.</p>
+            <div class="diff-card__line" aria-hidden="true"></div>
+          </article>
+
+          <article class="diff-card" data-tilt data-diff-index="2" style="--diff-accent: #b22c2e;">
+            <div class="diff-card__glow-border" aria-hidden="true"></div>
+            <div class="diff-card__bg-gradient" aria-hidden="true"></div>
+            <div class="diff-card__number" aria-hidden="true">03</div>
+            <div class="diff-card__accent"></div>
+            <h3 class="diff-card__title">We turn analysis into decisions</h3>
+            <p class="diff-card__text">Technical depth means nothing if leadership can't act on it. We translate complexity into clear executive choices — fast.</p>
+            <div class="diff-card__line" aria-hidden="true"></div>
+          </article>
+        </div>
       </div>
     </div>
   </section>
@@ -355,21 +433,22 @@ const homeMotionConfig = {
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = Math.round(eased * target);
       el.textContent = `${prefix}${current.toLocaleString()}${suffix}`;
-      if (progress < 1) requestAnimationFrame(tick);
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        // Counter finished — trigger glow animation on parent tile
+        const tile = el.closest(".metric-tile");
+        if (tile) tile.classList.add("is-counted");
+      }
     };
 
     requestAnimationFrame(tick);
   };
 
-  // ── Timeline reveal ──
-  const revealTimeline = (el: HTMLElement) => {
-    el.classList.add("is-revealed");
-  };
-
-  // ── IntersectionObserver for counters + timeline ──
+  // ── IntersectionObserver for counters ──
+  // (Timeline is now driven by GSAP ScrollTrigger in homeMotion.ts)
   const setupObservers = () => {
     const counterEls = document.querySelectorAll<HTMLElement>("[data-counter]");
-    const timelineEl = document.querySelector<HTMLElement>(".process-timeline");
 
     const counterObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -378,22 +457,9 @@ const homeMotionConfig = {
           counterObserver.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.3 });
+    }, { threshold: 0.5 });
 
     counterEls.forEach(el => counterObserver.observe(el));
-
-    if (timelineEl) {
-      const timelineObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            revealTimeline(entry.target as HTMLElement);
-            timelineObserver.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.2 });
-
-      timelineObserver.observe(timelineEl);
-    }
   };
 
   setupObservers();

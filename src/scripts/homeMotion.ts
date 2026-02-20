@@ -282,6 +282,7 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   const mobilePopupCard = mobilePopupOverlay?.querySelector<HTMLElement>(".mobile-popup-overlay__card") ?? null;
   const lightspeedSection = document.getElementById("lightspeedCta");
   const lightspeedContent = document.getElementById("lightspeedContent");
+  const lightspeedWrapper = lightspeedContent?.parentElement ?? null;
   const siteHeader = document.getElementById("siteHeader");
 
   if (!canvas || !slides.length) return () => {};
@@ -1963,10 +1964,36 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
     if (lightspeedSection) {
       lightspeedSection.style.background = lsFullWhite ? "#ffffff" : "transparent";
     }
-    // Fade in the CTA content section as the flash completes
-    if (lightspeedContent) {
-      const contentFade = smoothstep(0.88, 0.98, lightspeedWarp);
-      lightspeedContent.style.opacity = `${contentFade}`;
+    // Scroll-driven CTA animation: rises up into view → holds → fades away
+    if (lightspeedContent && lightspeedWrapper) {
+      // Only animate once lightspeed flash is nearly complete
+      const contentReady = lightspeedWarp > 0.90;
+      if (contentReady) {
+        const wrapRect = lightspeedWrapper.getBoundingClientRect();
+        const wrapH = lightspeedWrapper.offsetHeight;
+        const scrolledInWrap = -wrapRect.top;
+        const wrapProgress = clamp(scrolledInWrap / (wrapH - height), 0, 1);
+
+        // Phase 1 (0–0.25): rise up from below + fade in + slight scale up
+        // Phase 2 (0.25–0.65): hold centered, fully visible
+        // Phase 3 (0.65–1.0): fade out + slight scale down
+        const enterFade = smoothstep(0, 0.25, wrapProgress);
+        const exitFade = 1 - smoothstep(0.65, 0.95, wrapProgress);
+        const opacity = enterFade * exitFade;
+
+        // Rise from 60px below → 0 during enter
+        const enterY = (1 - smoothstep(0, 0.3, wrapProgress)) * 60;
+        // Scale: 0.94 → 1.0 during enter, 1.0 → 0.97 during exit
+        const enterScale = 0.94 + smoothstep(0, 0.25, wrapProgress) * 0.06;
+        const exitScale = 1 - smoothstep(0.65, 0.95, wrapProgress) * 0.03;
+        const scale = enterScale * exitScale;
+
+        lightspeedContent.style.opacity = `${opacity}`;
+        lightspeedContent.style.transform = `translateY(${enterY}px) scale(${scale})`;
+      } else {
+        lightspeedContent.style.opacity = "0";
+        lightspeedContent.style.transform = "translateY(60px) scale(0.94)";
+      }
     }
     // Header switches to white theme when screen goes white
     if (siteHeader) {
@@ -2256,6 +2283,669 @@ const initHeroSequence = (wrapper: HTMLElement, config: MotionConfig) => {
   };
 };
 
+/* ─────────────────────────────────────────────
+   Scroll-reactive content sections — premium
+   ───────────────────────────────────────────── */
+
+/** Metric tiles — dramatic entrance with blur, scale, stagger + parallax drift */
+const initMetricScrollEffects = (): (() => void) => {
+  const section = document.getElementById("metricSection");
+  if (!section) return () => {};
+
+  const tiles = Array.from(section.querySelectorAll<HTMLElement>(".metric-tile"));
+  const header = section.querySelector<HTMLElement>(".metric-header");
+  const chip = header?.querySelector<HTMLElement>(".chip");
+  const heading = header?.querySelector<HTMLElement>("h2");
+  const sub = header?.querySelector<HTMLElement>(".metric-header__sub");
+  if (!tiles.length) return () => {};
+
+  const isMobile = window.innerWidth <= 760;
+
+  // Set --tile-accent CSS var from data-accent
+  tiles.forEach((tile) => {
+    const accent = tile.dataset.accent;
+    if (accent) tile.style.setProperty("--tile-accent", accent);
+  });
+
+  const allTriggers: ScrollTrigger[] = [];
+  const allTimelines: gsap.core.Timeline[] = [];
+
+  // ── Header entrance: chip snaps, title slides, sub fades ──
+  if (header) {
+    const headerTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: section,
+        start: "top 88%",
+        toggleActions: "play none none reverse",
+      },
+    });
+    allTimelines.push(headerTl);
+    if (headerTl.scrollTrigger) allTriggers.push(headerTl.scrollTrigger);
+
+    if (chip) {
+      headerTl.fromTo(
+        chip,
+        { opacity: 0, scale: 0.6, y: 20 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(2.5)" },
+        0
+      );
+    }
+    if (heading) {
+      headerTl.fromTo(
+        heading,
+        { opacity: 0, y: 50, clipPath: "inset(0 0 100% 0)" },
+        { opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)", duration: 0.8, ease: "power4.out" },
+        0.15
+      );
+    }
+    if (sub) {
+      headerTl.fromTo(
+        sub,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+        0.35
+      );
+    }
+  }
+
+  // ── Tile entrance — DRAMATIC staggered reveal ──
+  // Desktop: tiles slide up from below with rotation + scale pop + blur clear
+  // Mobile: tiles shoot up with rotation kick + scale bounce
+  tiles.forEach((tile, i) => {
+    const delay = i * 0.12;
+    const isEven = i % 2 === 0;
+
+    if (isMobile) {
+      // Mobile: explosive entrance with slight rotation alternation
+      const tween = gsap.fromTo(
+        tile,
+        {
+          opacity: 0,
+          y: 80,
+          scale: 0.85,
+          rotation: isEven ? -3 : 3,
+        },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          rotation: 0,
+          duration: 0.7,
+          ease: "back.out(1.7)",
+          scrollTrigger: {
+            trigger: tile,
+            start: "top 92%",
+            toggleActions: "play none none reverse",
+          },
+        }
+      );
+      if (tween.scrollTrigger) allTriggers.push(tween.scrollTrigger);
+    } else {
+      // Desktop: dramatic staggered entrance with individual triggers
+      const tween = gsap.fromTo(
+        tile,
+        {
+          opacity: 0,
+          y: 100 + i * 15,
+          scale: 0.8,
+          rotateX: 8,
+          filter: "blur(8px)",
+        },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          rotateX: 0,
+          filter: "blur(0px)",
+          duration: 0.9,
+          delay,
+          ease: "back.out(1.4)",
+          scrollTrigger: {
+            trigger: section,
+            start: "top 78%",
+            toggleActions: "play none none reverse",
+          },
+        }
+      );
+      if (tween.scrollTrigger) allTriggers.push(tween.scrollTrigger);
+    }
+  });
+
+  // ── Icon pop — each icon does a little bounce after tile lands ──
+  const icons = Array.from(section.querySelectorAll<HTMLElement>(".metric-tile__icon"));
+  icons.forEach((icon, i) => {
+    const tween = gsap.fromTo(
+      icon,
+      { scale: 0, rotation: -45 },
+      {
+        scale: 1,
+        rotation: 0,
+        duration: 0.5,
+        ease: "back.out(3)",
+        scrollTrigger: {
+          trigger: tiles[i] || section,
+          start: isMobile ? "top 88%" : "top 75%",
+          toggleActions: "play none none reverse",
+        },
+        delay: isMobile ? 0.25 : 0.3 + i * 0.12,
+      }
+    );
+    if (tween.scrollTrigger) allTriggers.push(tween.scrollTrigger);
+  });
+
+  // ── Post-entrance parallax drift (desktop only) ──
+  if (!isMobile) {
+    tiles.forEach((tile, i) => {
+      const st = ScrollTrigger.create({
+        trigger: section,
+        start: "center center",
+        end: "bottom top",
+        scrub: true,
+        onUpdate: (self) => {
+          const drift = self.progress * (-18 - i * 6);
+          tile.style.transform = `translateY(${drift}px)`;
+        },
+      });
+      allTriggers.push(st);
+    });
+  }
+
+  return () => {
+    allTriggers.forEach((st) => st.kill());
+    allTimelines.forEach((tl) => tl.kill());
+  };
+};
+
+/** Process timeline — scroll-driven line + dot activation + step entrance + number color sweep */
+const initTimelineScrollEffects = (): (() => void) => {
+  const section = document.getElementById("processSection");
+  const processHeader = section?.querySelector<HTMLElement>(".process-header");
+  if (!section) return () => {};
+
+  const isMobile = window.innerWidth <= 760;
+  const cards = Array.from(section.querySelectorAll<HTMLElement>(".process-card"));
+  if (!cards.length) return () => {};
+
+  const allTriggers: ScrollTrigger[] = [];
+  const allTimelines: gsap.core.Timeline[] = [];
+
+  // ── Process header entrance — chip pops, title clip-reveals, sub fades ──
+  if (processHeader) {
+    const pChip = processHeader.querySelector<HTMLElement>(".chip");
+    const pHeading = processHeader.querySelector<HTMLElement>("h2");
+    const pSub = processHeader.querySelector<HTMLElement>(".process-header__sub");
+
+    const headerTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: section,
+        start: "top 88%",
+        toggleActions: "play none none reverse",
+      },
+    });
+    allTimelines.push(headerTl);
+    if (headerTl.scrollTrigger) allTriggers.push(headerTl.scrollTrigger);
+
+    if (pChip) {
+      headerTl.fromTo(
+        pChip,
+        { opacity: 0, scale: 0.5, y: 25 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(2.5)" },
+        0
+      );
+    }
+    if (pHeading) {
+      headerTl.fromTo(
+        pHeading,
+        { opacity: 0, y: 50, clipPath: "inset(0 0 100% 0)" },
+        { opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)", duration: 0.8, ease: "power4.out" },
+        0.15
+      );
+    }
+    if (pSub) {
+      headerTl.fromTo(
+        pSub,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+        0.35
+      );
+    }
+  }
+
+  // ── Stacking card activation — each card activates when it reaches its sticky position ──
+  cards.forEach((card, i) => {
+    const num = card.querySelector<HTMLElement>(".process-card__num");
+    const title = card.querySelector<HTMLElement>(".process-card__title");
+    const desc = card.querySelector<HTMLElement>(".process-card__desc");
+    const tag = card.querySelector<HTMLElement>(".process-card__tag");
+    const icon = card.querySelector<HTMLElement>(".process-card__icon");
+    const accentLine = card.querySelector<HTMLElement>(".process-card__accent-line");
+
+    if (isMobile) {
+      // Mobile: cards enter with alternating slide + rotation + scale bounce
+      const isEven = i % 2 === 0;
+      const cardTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: card,
+          start: "top 92%",
+          toggleActions: "play none none reverse",
+        },
+      });
+      allTimelines.push(cardTl);
+      if (cardTl.scrollTrigger) allTriggers.push(cardTl.scrollTrigger);
+
+      // Card body entrance — rotation + slide from alternating side
+      cardTl.fromTo(
+        card,
+        { opacity: 0, x: isEven ? -50 : 50, y: 30, rotation: isEven ? -3 : 3, scale: 0.88 },
+        {
+          opacity: 1, x: 0, y: 0, rotation: 0, scale: 1,
+          duration: 0.65, ease: "back.out(1.6)",
+          onComplete: () => card.classList.add("is-active"),
+        },
+        0
+      );
+
+      // Number slams in
+      if (num) {
+        cardTl.fromTo(
+          num,
+          { scale: 2.5, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(2.5)" },
+          0.15
+        );
+      }
+
+      // Title wipes
+      if (title) {
+        cardTl.fromTo(
+          title,
+          { opacity: 0, x: isEven ? -20 : 20 },
+          { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" },
+          0.25
+        );
+      }
+
+      // Desc fades
+      if (desc) {
+        cardTl.fromTo(
+          desc,
+          { opacity: 0, y: 10 },
+          { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
+          0.3
+        );
+      }
+
+      // Tag snaps
+      if (tag) {
+        cardTl.fromTo(
+          tag,
+          { opacity: 0, scale: 0.6 },
+          { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" },
+          0.35
+        );
+      }
+    } else {
+      // Desktop: card entrance — slides up with blur + scale, activates when it becomes "current"
+      const cardTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: card,
+          start: "top 85%",
+          toggleActions: "play none none reverse",
+        },
+      });
+      allTimelines.push(cardTl);
+      if (cardTl.scrollTrigger) allTriggers.push(cardTl.scrollTrigger);
+
+      // Card entrance
+      cardTl.fromTo(
+        card,
+        { opacity: 0, y: 80, scale: 0.92, filter: "blur(8px)" },
+        {
+          opacity: 1, y: 0, scale: 1, filter: "blur(0px)",
+          duration: 0.7, ease: "power3.out",
+        },
+        0
+      );
+
+      // Activation trigger — card activates when it pins at its sticky position
+      const activationTrigger = ScrollTrigger.create({
+        trigger: card,
+        start: "top 20%",
+        end: "bottom top",
+        onEnter: () => {
+          // Deactivate all, activate current
+          cards.forEach((c) => c.classList.remove("is-active"));
+          card.classList.add("is-active");
+
+          // Number pop
+          if (num) {
+            gsap.fromTo(
+              num,
+              { scale: 0.5 },
+              { scale: 1, duration: 0.5, ease: "back.out(3)" }
+            );
+          }
+          // Icon rotate
+          if (icon) {
+            gsap.fromTo(
+              icon,
+              { rotation: -10, scale: 0.8 },
+              { rotation: 0, scale: 1, duration: 0.5, ease: "back.out(2)" }
+            );
+          }
+        },
+        onLeaveBack: () => {
+          card.classList.remove("is-active");
+          // Re-activate previous card
+          if (i > 0) cards[i - 1].classList.add("is-active");
+        },
+      });
+      allTriggers.push(activationTrigger);
+    }
+  });
+
+  return () => {
+    allTriggers.forEach((st) => st.kill());
+    allTimelines.forEach((tl) => tl.kill());
+    cards.forEach((c) => c.classList.remove("is-active"));
+  };
+};
+
+/** Differentiator cards — 3D tilt on mouse move (desktop only) */
+const initDiffCardTilt = (): (() => void) => {
+  if (window.matchMedia("(hover: none)").matches) return () => {};
+
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".diff-card[data-tilt]"));
+  if (!cards.length) return () => {};
+
+  const MAX_TILT = 6;
+
+  const handlers: Array<{
+    card: HTMLElement;
+    move: (e: MouseEvent) => void;
+    leave: () => void;
+  }> = [];
+
+  cards.forEach((card) => {
+    const glowBorder = card.querySelector<HTMLElement>(".diff-card__glow-border");
+
+    const move = (e: MouseEvent) => {
+      const rect = card.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+
+      const rotateY = (x - 0.5) * MAX_TILT * 2;
+      const rotateX = (0.5 - y) * MAX_TILT * 2;
+
+      card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+
+      if (glowBorder) {
+        glowBorder.style.setProperty("--mouse-x", `${x * 100}%`);
+        glowBorder.style.setProperty("--mouse-y", `${y * 100}%`);
+      }
+    };
+
+    const leave = () => {
+      card.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg)";
+    };
+
+    card.addEventListener("mousemove", move);
+    card.addEventListener("mouseleave", leave);
+    handlers.push({ card, move, leave });
+  });
+
+  return () => {
+    handlers.forEach(({ card, move, leave }) => {
+      card.removeEventListener("mousemove", move);
+      card.removeEventListener("mouseleave", leave);
+      card.style.transform = "";
+    });
+  };
+};
+
+/** Differentiator cards — 3D fan-in with blur, reveal class, parallax drift */
+const initDiffScrollEffects = (): (() => void) => {
+  const section = document.getElementById("diffSection");
+  if (!section) return () => {};
+
+  const cards = Array.from(section.querySelectorAll<HTMLElement>(".diff-card"));
+  const header = section.querySelector<HTMLElement>(".diff-header");
+  const numbers = Array.from(section.querySelectorAll<HTMLElement>(".diff-card__number"));
+  const cardTitles = Array.from(section.querySelectorAll<HTMLElement>(".diff-card__title"));
+  const cardTexts = Array.from(section.querySelectorAll<HTMLElement>(".diff-card__text"));
+  const accents = Array.from(section.querySelectorAll<HTMLElement>(".diff-card__accent"));
+  if (!cards.length) return () => {};
+
+  const isMobile = window.innerWidth <= 760;
+  const allTriggers: ScrollTrigger[] = [];
+  const allTimelines: gsap.core.Timeline[] = [];
+
+  // ── Header entrance — chip pops, title clip-reveals, sub fades ──
+  if (header) {
+    const dChip = header.querySelector<HTMLElement>(".chip");
+    const dHeading = header.querySelector<HTMLElement>("h2");
+    const dSub = header.querySelector<HTMLElement>(".diff-header__sub");
+
+    const headerTl = gsap.timeline({
+      scrollTrigger: {
+        trigger: section,
+        start: "top 85%",
+        toggleActions: "play none none reverse",
+      },
+    });
+    allTimelines.push(headerTl);
+    if (headerTl.scrollTrigger) allTriggers.push(headerTl.scrollTrigger);
+
+    if (dChip) {
+      headerTl.fromTo(
+        dChip,
+        { opacity: 0, scale: 0.5, y: 25 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(2.5)" },
+        0
+      );
+    }
+    if (dHeading) {
+      headerTl.fromTo(
+        dHeading,
+        { opacity: 0, y: 60, clipPath: "inset(0 0 100% 0)" },
+        { opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)", duration: 0.9, ease: "power4.out" },
+        0.15
+      );
+    }
+    if (dSub) {
+      headerTl.fromTo(
+        dSub,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+        0.4
+      );
+    }
+  }
+
+  // ── Card reveals — fully orchestrated per-card timelines ──
+  cards.forEach((card, i) => {
+    if (isMobile) {
+      // Mobile: dramatic individual card entrance with internal stagger
+      const cardTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: card,
+          start: "top 92%",
+          toggleActions: "play none none reverse",
+        },
+      });
+      allTimelines.push(cardTl);
+      if (cardTl.scrollTrigger) allTriggers.push(cardTl.scrollTrigger);
+
+      const isEven = i % 2 === 0;
+
+      // Card body: rotation + scale bounce from alternating side
+      cardTl.fromTo(
+        card,
+        { opacity: 0, x: isEven ? -40 : 40, y: 50, rotation: isEven ? -4 : 4, scale: 0.85 },
+        {
+          opacity: 1, x: 0, y: 0, rotation: 0, scale: 1,
+          duration: 0.65, ease: "back.out(1.8)",
+          onComplete: () => card.classList.add("is-revealed"),
+        },
+        0
+      );
+
+      // Number slams in big
+      if (numbers[i]) {
+        cardTl.fromTo(
+          numbers[i],
+          { scale: 2, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(2.5)" },
+          0.15
+        );
+      }
+
+      // Title wipes in
+      if (cardTitles[i]) {
+        cardTl.fromTo(
+          cardTitles[i],
+          { opacity: 0, x: isEven ? -20 : 20 },
+          { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" },
+          0.25
+        );
+      }
+
+      // Text fades
+      if (cardTexts[i]) {
+        cardTl.fromTo(
+          cardTexts[i],
+          { opacity: 0, y: 10 },
+          { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" },
+          0.35
+        );
+      }
+
+      // Accent bar sweeps down
+      if (accents[i]) {
+        cardTl.fromTo(
+          accents[i],
+          { height: "0%" },
+          { height: "100%", duration: 0.6, ease: "power2.inOut" },
+          0.2
+        );
+      }
+    } else {
+      // Desktop: 3D fan-in — more dramatic than before
+      const offsets = [
+        { x: -80, rotateZ: -6, rotateY: -12, y: 120 },
+        { x: 0, rotateZ: 0, rotateY: 0, y: 100 },
+        { x: 80, rotateZ: 6, rotateY: 12, y: 120 },
+      ];
+      const offset = offsets[i] || offsets[1];
+
+      const cardTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: section,
+          start: "top 72%",
+          toggleActions: "play none none reverse",
+        },
+      });
+      allTimelines.push(cardTl);
+      if (cardTl.scrollTrigger) allTriggers.push(cardTl.scrollTrigger);
+
+      // Main card entrance
+      cardTl.fromTo(
+        card,
+        {
+          opacity: 0,
+          y: offset.y,
+          x: offset.x,
+          rotateZ: offset.rotateZ,
+          rotateY: offset.rotateY,
+          scale: 0.75,
+          filter: "blur(10px)",
+        },
+        {
+          opacity: 1,
+          y: 0,
+          x: 0,
+          rotateZ: 0,
+          rotateY: 0,
+          scale: 1,
+          filter: "blur(0px)",
+          duration: 0.9,
+          delay: i * 0.15,
+          ease: "back.out(1.2)",
+          onComplete: () => card.classList.add("is-revealed"),
+        },
+        0
+      );
+
+      // Number scales in with overshoot
+      if (numbers[i]) {
+        cardTl.fromTo(
+          numbers[i],
+          { scale: 2.5, opacity: 0 },
+          { scale: 1, opacity: 1, duration: 0.6, delay: i * 0.15, ease: "back.out(2)" },
+          0.3
+        );
+      }
+
+      // Accent bar sweeps
+      if (accents[i]) {
+        cardTl.fromTo(
+          accents[i],
+          { height: "0%" },
+          { height: "100%", duration: 0.7, delay: i * 0.15, ease: "power2.inOut" },
+          0.4
+        );
+      }
+    }
+  });
+
+  // ── Post-reveal parallax drift (desktop only) ──
+  if (!isMobile) {
+    cards.forEach((card, i) => {
+      const st = ScrollTrigger.create({
+        trigger: section,
+        start: "center center",
+        end: "bottom top",
+        scrub: true,
+        onUpdate: (self) => {
+          if (!card.matches(":hover")) {
+            const drift = self.progress * (-25 + i * 10);
+            card.style.transform = `perspective(800px) rotateX(0deg) rotateY(0deg) translateY(${drift}px)`;
+          }
+        },
+      });
+      allTriggers.push(st);
+    });
+  }
+
+  return () => {
+    allTriggers.forEach((st) => st.kill());
+    allTimelines.forEach((tl) => tl.kill());
+  };
+};
+
+/** Global color temperature shift — subtle red overlay when scrolling through content */
+const initGlobalColorShift = (): (() => void) => {
+  const metricSection = document.getElementById("metricSection");
+  const diffSection = document.getElementById("diffSection");
+  if (!metricSection) return () => {};
+
+  const trigger = ScrollTrigger.create({
+    trigger: metricSection,
+    start: "top 90%",
+    endTrigger: diffSection || metricSection,
+    end: "bottom top",
+    onEnter: () => document.body.classList.add("content-zone"),
+    onLeave: () => document.body.classList.remove("content-zone"),
+    onEnterBack: () => document.body.classList.add("content-zone"),
+    onLeaveBack: () => document.body.classList.remove("content-zone"),
+  });
+
+  return () => {
+    trigger.kill();
+    document.body.classList.remove("content-zone");
+  };
+};
+
 export const initializeHomePageMotion = () => {
   const wrapper = document.getElementById("heroSequenceWrapper");
   if (!wrapper) return () => {};
@@ -2268,9 +2958,21 @@ export const initializeHomePageMotion = () => {
   const cleanupButtons = initMagneticButtons(config);
   const cleanupHeroSequence = initHeroSequence(wrapper, config);
 
+  // Scroll-reactive content sections
+  const cleanupMetricScroll = initMetricScrollEffects();
+  const cleanupTimelineScroll = initTimelineScrollEffects();
+  const cleanupDiffTilt = initDiffCardTilt();
+  const cleanupDiffScroll = initDiffScrollEffects();
+  const cleanupColorShift = initGlobalColorShift();
+
   return () => {
     cleanupButtons();
     cleanupHeroSequence();
+    cleanupMetricScroll();
+    cleanupTimelineScroll();
+    cleanupDiffTilt();
+    cleanupDiffScroll();
+    cleanupColorShift();
     gsapContext.revert();
   };
 };
